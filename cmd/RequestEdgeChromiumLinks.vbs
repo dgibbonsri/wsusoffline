@@ -344,7 +344,7 @@ End Sub
 
 ' ----------------------------------------------------------------------------------------------------
 
-' Quelle: http://www.rlmueller.net/Programs/Base64ToHex.txt
+' Source: http://www.rlmueller.net/Programs/Base64ToHex.txt
 ' modifiziert durch aker
 
 ' Base64ToHex.vbs
@@ -511,7 +511,7 @@ End Function
 
 ' ----------------------------------------------------------------------------------------------------
 
-' Quelle: https://github.com/gerritvankuipers/aspjson
+' Source: https://github.com/gerritvankuipers/aspjson
 ' VBScript-adjustments by aker
 ' January 2021 - Version 1.19 by Gerrit van Kuipers
 Class aspJSON

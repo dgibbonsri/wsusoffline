@@ -241,32 +241,24 @@ call "%TEMP%\SetTZVariable.cmd"
 del "%TEMP%\SetTZVariable.cmd"
 call :Log "Info: Set time zone to !TZ!"
 :SkipTZ
-if exist custom\SetAria2EnvVars.cmd (
-  if "%http_proxy%" NEQ "" (call ActivateAria2Downloads.cmd /reload /proxy %http_proxy%) else (call ActivateAria2Downloads.cmd /reload)
-  call custom\SetAria2EnvVars.cmd
-) else (
-  set DLDR_PATH=%WGET_PATH%
-  set DLDR_COPT=-N --progress=bar:noscroll --trust-server-names
-  set DLDR_LOPT=-a %DOWNLOAD_LOGFILE%
-  set DLDR_IOPT=-i
-  set DLDR_POPT=-P
-  set DLDR_NVOPT=-nv
-  rem set DLDR_NCOPT=--no-check-certificate
-  set DLDR_UOPT=-U "Mozilla/5.0 (Windows NT 10.0)"
-)
+rem *** Downloader: the bundled GNU Wget (the optional aria2 downloader has been removed) ***
+set DLDR_PATH=%WGET_PATH%
+set DLDR_COPT=-N --progress=bar:noscroll --trust-server-names
+set DLDR_LOPT=-a %DOWNLOAD_LOGFILE%
+set DLDR_IOPT=-i
+set DLDR_POPT=-P
+set DLDR_NVOPT=-nv
+rem set DLDR_NCOPT=--no-check-certificate
+set DLDR_UOPT=-U "Mozilla/5.0 (Windows NT 10.0)"
 if not exist %DLDR_PATH% goto NoDLdr
-if not exist ..\bin\unzip.exe goto NoUnZip
-if not exist ..\client\bin\unzip.exe copy ..\bin\unzip.exe ..\client\bin >nul
+if not exist %SystemRoot%\System32\tar.exe goto NoTar
 if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" (set HASHDEEP_EXE=hashdeep64.exe) else (
   if /i "%PROCESSOR_ARCHITEW6432%"=="AMD64" (set HASHDEEP_EXE=hashdeep64.exe) else (set HASHDEEP_EXE=hashdeep.exe)
 )
 
-rem ** disable SDD, if local version != most recent version ***
-if "%http_proxy%" NEQ "" (call CheckOUVersion.cmd /mode:different /quiet /proxy %http_proxy%) else (call CheckOUVersion.cmd /mode:different /quiet)
-if not "%errorlevel%"=="0" (
-  set SKIP_SDD=1
-  call :Log "Info: Disabled static and exclude definitions update due to version mismatch"
-)
+rem *** Static and exclude definitions are NOT updated from the WSUS Offline community repository
+rem *** ("SDD") in this build. All definitions come from this repository only. ***
+set SKIP_SDD=1
 
 rem *** Clean up existing directories ***
 echo Cleaning up existing directories...
@@ -372,6 +364,12 @@ if exist ..\static\StaticDownloadLink-sigcheck.txt del ..\static\StaticDownloadL
 if exist ..\static\StaticDownloadLink-streams.txt del ..\static\StaticDownloadLink-streams.txt
 if exist ..\static\StaticDownloadLinks-mkisofs.txt del ..\static\StaticDownloadLinks-mkisofs.txt
 if exist ..\static\StaticDownloadLink-unzip.txt del ..\static\StaticDownloadLink-unzip.txt
+rem *** Removed in this build: community repository (SDD, self-update, mkisofs), aria2, unzip, IfAdmin ***
+for %%f in (..\bin\mkisofs.exe ..\bin\unzip.exe ..\bin\Info-Zip-License.txt ..\client\bin\unzip.exe ..\client\bin\IfAdmin.exe ..\client\bin\IfAdmin.cpp UpdateOU.cmd UpdateOU.new CheckOUVersion.cmd ActivateAria2Downloads.cmd ..\static\StaticDownloadLinks-aria2.txt ..\static\SelfUpdateVersion-static.txt ..\static\SelfUpdateVersion-recent.txt ..\static\StaticDownloadLink-recent.txt) do (
+  if exist %%f del %%f
+)
+if exist ..\static\sdd\nul rd /S /Q ..\static\sdd
+if exist ..\bin\aria2c.exe del ..\bin\aria2c.exe
 
 rem *** Windows 2000 stuff ***
 if exist ..\client\bin\reg.exe del ..\client\bin\reg.exe
@@ -675,163 +673,6 @@ if exist ..\client\md\nul (
   )
 )
 
-if "%SKIP_SDD%"=="1" goto SkipSDD
-echo Preserving custom language and architecture additions and removals...
-set CUST_LANG=
-if exist ..\static\custom\StaticDownloadLinks-dotnet.txt (
-  for %%i in (fra esn jpn kor rus ptg ptb nld ita chs cht plk hun csy sve trk ell ara heb dan nor fin) do (
-    %SystemRoot%\System32\find.exe /I "%%i" ..\static\custom\StaticDownloadLinks-dotnet.txt >nul 2>&1
-    if not errorlevel 1 (
-      set CUST_LANG=%%i !CUST_LANG!
-      call RemoveCustomLanguageSupport.cmd %%i /quiet
-    )
-  )
-)
-set OX64_LANG=
-for %%i in (enu fra esn jpn kor rus ptg ptb deu nld ita chs cht plk hun csy sve trk ell ara heb dan nor fin) do (
-  if exist ..\static\custom\StaticDownloadLinks-o2k13-%%i.txt (
-    set OX64_LANG=%%i !OX64_LANG!
-    call RemoveOffice2010x64Support.cmd %%i /quiet
-  )
-)
-call :Log "Info: Preserved custom language and architecture additions and removals"
-
-echo Updating static and exclude definitions for download and update...
-if not exist ..\static\sdd md ..\static\sdd
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/StaticDownloadFiles-modified.txt ..\static\sdd
-if not "%SDDCoreReturnValue%"=="0" (
-  call :Log "Warning: Failed to update StaticDownloadFiles-modified.txt"
-  goto SkipSDDDownload
-)
-if exist ..\static\sdd\StaticDownloadFiles-modified.txt (
-  for /f "delims=" %%f in (..\static\sdd\StaticDownloadFiles-modified.txt) do (
-    if not "%%f"=="" (
-      call :SDDCore "https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/StaticDownloadFiles-modified/%%f" ..\static
-      if not "!SDDCoreReturnValue!"=="0" (
-        call :Log "Warning: Failed to download https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/StaticDownloadFiles-modified/%%f"
-        goto SkipSDDDownload
-      )
-    )
-  )
-)
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/ExcludeDownloadFiles-modified.txt ..\static\sdd
-if not "%SDDCoreReturnValue%"=="0" (
-  call :Log "Warning: Failed to update ExcludeDownloadFiles-modified.txt"
-  goto SkipSDDDownload
-)
-if exist ..\static\sdd\ExcludeDownloadFiles-modified.txt (
-  for /f "delims=" %%f in (..\static\sdd\ExcludeDownloadFiles-modified.txt) do (
-    if not "%%f"=="" (
-      call :SDDCore "https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/ExcludeDownloadFiles-modified/%%f" ..\exclude
-      if not "!SDDCoreReturnValue!"=="0" (
-        call :Log "Warning: Failed to download https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/ExcludeDownloadFiles-modified/%%f"
-        goto SkipSDDDownload
-      )
-    )
-  )
-)
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/StaticUpdateFiles-modified.txt ..\static\sdd
-if not "%SDDCoreReturnValue%"=="0" (
-  call :Log "Warning: Failed to update StaticUpdateFiles-modified.txt"
-  goto SkipSDDDownload
-)
-if exist ..\static\sdd\StaticUpdateFiles-modified.txt (
-  for /f "delims=" %%f in (..\static\sdd\StaticUpdateFiles-modified.txt) do (
-    if not "%%f"=="" (
-      call :SDDCore "https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/StaticUpdateFiles-modified/%%f" ..\client\static
-      if not "!SDDCoreReturnValue!"=="0" (
-        call :Log "Warning: Failed to download https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/StaticUpdateFiles-modified/%%f"
-        goto SkipSDDDownload
-      )
-    )
-  )
-)
-copy /Y ..\exclude\ExcludeList-superseded-exclude.txt ..\exclude\ExcludeList-superseded-exclude.ori >nul
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/ExcludeList-superseded-exclude.txt ..\exclude
-if "%SDDCoreReturnValue%"=="0" (
-  echo n | %SystemRoot%\System32\comp.exe ..\exclude\ExcludeList-superseded-exclude.txt ..\exclude\ExcludeList-superseded-exclude.ori /A /L /C >nul 2>&1
-  if errorlevel 1 (
-    if exist ..\exclude\ExcludeList-superseded.txt del ..\exclude\ExcludeList-superseded.txt
-  )
-  del ..\exclude\ExcludeList-superseded-exclude.ori
-) else (
-  call :Log "Warning: Failed to update .\exclude\ExcludeList-superseded-exclude.txt"
-  move /Y ..\exclude\ExcludeList-superseded-exclude.ori ..\exclude\ExcludeList-superseded-exclude.txt >nul
-)
-copy /Y ..\exclude\ExcludeList-superseded-exclude-seconly.txt ..\exclude\ExcludeList-superseded-exclude-seconly.ori >nul
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/ExcludeList-superseded-exclude-seconly.txt ..\exclude
-if "%SDDCoreReturnValue%"=="0" (
-  echo n | %SystemRoot%\System32\comp.exe ..\exclude\ExcludeList-superseded-exclude-seconly.txt ..\exclude\ExcludeList-superseded-exclude-seconly.ori /A /L /C >nul 2>&1
-  if errorlevel 1 (
-    if exist ..\exclude\ExcludeList-superseded.txt del ..\exclude\ExcludeList-superseded.txt
-  )
-  del ..\exclude\ExcludeList-superseded-exclude-seconly.ori
-) else (
-  call :Log "Warning: Failed to update .\exclude\ExcludeList-superseded-exclude-seconly.txt"
-  move /Y ..\exclude\ExcludeList-superseded-exclude-seconly.ori ..\exclude\ExcludeList-superseded-exclude-seconly.txt >nul
-)
-copy /Y ..\client\exclude\ExcludeList.txt ..\client\exclude\ExcludeList.ori >nul
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/ExcludeList.txt ..\client\exclude
-if "%SDDCoreReturnValue%"=="0" (
-  del ..\client\exclude\ExcludeList.ori
-) else (
-  call :Log "Warning: Failed to update .\client\exclude\ExcludeList.txt"
-  move /Y ..\client\exclude\ExcludeList.ori ..\client\exclude\ExcludeList.txt >nul
-)
-copy /Y ..\client\exclude\HideList-seconly.txt ..\client\exclude\HideList-seconly.ori >nul
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/HideList-seconly.txt ..\client\exclude
-if "%SDDCoreReturnValue%"=="0" (
-  echo n | %SystemRoot%\System32\comp.exe ..\client\exclude\HideList-seconly.txt ..\client\exclude\HideList-seconly.ori /A /L /C >nul 2>&1
-  if errorlevel 1 (
-    if exist ..\exclude\ExcludeList-superseded.txt del ..\exclude\ExcludeList-superseded.txt
-  )
-  del ..\client\exclude\HideList-seconly.ori
-) else (
-  call :Log "Warning: Failed to update .\client\exclude\HideList-seconly.txt"
-  move /Y ..\client\exclude\HideList-seconly.ori ..\client\exclude\HideList-seconly.txt >nul
-)
-copy /Y ..\client\opt\OptionList.txt ..\client\opt\OptionList.ori >nul
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/OptionList.txt ..\client\opt
-if "%SDDCoreReturnValue%"=="0" (
-  del ..\client\opt\OptionList.ori
-) else (
-  call :Log "Warning: Failed to update .\client\opt\OptionList.txt"
-  move /Y ..\client\opt\OptionList.ori ..\client\opt\OptionList.txt >nul
-)
-copy /Y ..\client\opt\OptionList-wildcard.txt ..\client\opt\OptionList-wildcard.ori >nul
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/OptionList-wildcard.txt ..\client\opt
-if "%SDDCoreReturnValue%"=="0" (
-  del ..\client\opt\OptionList-wildcard.ori
-) else (
-  call :Log "Warning: Failed to update .\client\opt\OptionList-wildcard.txt"
-  move /Y ..\client\opt\OptionList-wildcard.ori ..\client\opt\OptionList-wildcard.txt >nul
-)
-call :Log "Info: Updated static and exclude definitions for download and update"
-:SkipSDDDownload
-
-echo Restoring custom language and architecture additions and removals...
-if "%CUST_LANG%" NEQ "" (
-  for %%i in (%CUST_LANG%) do call AddCustomLanguageSupport.cmd %%i /quiet
-)
-if "%OX64_LANG%" NEQ "" (
-  for %%i in (%OX64_LANG%) do call AddOffice2010x64Support.cmd %%i /quiet
-)
-set CUST_LANG=
-set OX64_LANG=
-call :Log "Info: Restored custom language and architecture additions and removals"
-:SkipSDD
-
-rem *** Download mkisofs tool ***
-if "%SKIP_DL%"=="1" goto SkipMkIsoFs
-echo Downloading/validating mkisofs tool...
-call :SDDCore https://gitlab.com/wsusoffline/wsusoffline-sdd/-/raw/master/mkisofs.exe ..\bin
-if "%SDDCoreReturnValue%"=="0" (
-  call :Log "Info: Downloaded/validated mkisofs tool"
-) else (
-  echo Warning: Download of mkisofs tool failed.
-  call :Log "Warning: Download of mkisofs tool failed"
-)
-:SkipMkIsoFs
 
 rem *** Download Sysinternals' tools Autologon, Sigcheck and Streams ***
 if "%SKIP_DL%"=="1" goto SkipSysinternals
@@ -841,9 +682,9 @@ echo Downloading Sysinternals' tools Autologon, Sigcheck and Streams...
 if errorlevel 1 goto DownloadError
 call :Log "Info: Downloaded Sysinternals' tools Autologon, Sigcheck and Streams"
 pushd ..\bin
-unzip.exe -u -o AutoLogon.zip -x Eula.txt -d ..\client\bin
-unzip.exe -u -o Sigcheck.zip -x Eula.txt
-unzip.exe -u -o Streams.zip -x Eula.txt
+%SystemRoot%\System32\tar.exe -xf AutoLogon.zip --exclude Eula.txt -C ..\client\bin
+%SystemRoot%\System32\tar.exe -xf Sigcheck.zip --exclude Eula.txt
+%SystemRoot%\System32\tar.exe -xf Streams.zip --exclude Eula.txt
 popd
 :SkipSysinternals
 if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" (set SIGCHK_PATH=..\bin\sigcheck64.exe) else (
@@ -863,33 +704,6 @@ set SIGCHK_VER_REVIS=
 :SkipSigChkOpts
 if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" (set STRMS_PATH=..\bin\streams64.exe) else (
   if /i "%PROCESSOR_ARCHITEW6432%"=="AMD64" (set STRMS_PATH=..\bin\streams64.exe) else (set STRMS_PATH=..\bin\streams.exe)
-)
-
-rem *** Cleanup UpdateOU.new ***
-if exist UpdateOU.new (
-  if exist UpdateOU.cmd del UpdateOU.cmd
-  ren UpdateOU.new UpdateOU.cmd
-  rem *** Remove NTFS alternate data streams from new or updated script files ***
-  if exist %STRMS_PATH% (
-    %STRMS_PATH% /accepteula ..\*.* >nul 2>&1
-    if errorlevel 1 (
-      call :Log "Info: File system does not support streams"
-    ) else (
-      echo Removing NTFS alternate data streams from new or updated script files...
-      %STRMS_PATH% /accepteula -s -d ..\*.cmd >nul 2>&1
-      %STRMS_PATH% /accepteula -s -d ..\*.exe >nul 2>&1
-      %STRMS_PATH% /accepteula -s -d ..\*.vbs >nul 2>&1
-      if errorlevel 1 (
-        echo Warning: Unable to remove NTFS alternate data streams from new or updated script files.
-        call :Log "Warning: Unable to remove NTFS alternate data streams from new or updated script files"
-      ) else (
-        call :Log "Info: Removed NTFS alternate data streams from new or updated script files"
-      )
-    )
-  ) else (
-    echo Warning: Sysinternals' NTFS alternate data stream handling tool %STRMS_PATH% not found.
-    call :Log "Warning: Sysinternals' NTFS alternate data stream handling tool %STRMS_PATH% not found"
-  )
 )
 
 rem *** Download most recent Windows Update catalog file ***
@@ -1185,7 +999,7 @@ for /F "usebackq tokens=2 delims=," %%j in ("%TEMP%\DynamicDownloadLinks-msedge.
 
 if "%NEED_TO_DOWNLOAD_EDGE%"=="1" goto DownloadMSEdge
 
-rem Alles unver�ndert
+rem Everything unchanged
 
 call :Log "Info: Downloaded/validated Microsoft Edge (Chromium) installation files"
 del "%TEMP%\DynamicDownloadLinks-msedge.txt"
@@ -1210,7 +1024,7 @@ for /F "usebackq tokens=1,2 delims=," %%j in ("%TEMP%\DynamicDownloadLinks-msedg
       )
 
       if exist "%TEMP%\DynamicDownloadLink-msedge.txt" del "%TEMP%\DynamicDownloadLink-msedge.txt"
-      rem Workaround: wget akzeptiert nicht alle Sonderzeichen als Parameter
+      rem Workaround: wget does not accept all special characters as parameters
       echo %%j>"%TEMP%\DynamicDownloadLink-msedge.txt"
       if exist "%TEMP%\DynamicDownloadLink-msedge.txt" (
         if "!MSEdgeFileNamePartial!" NEQ "" del "..\client\msedge\!MSEdgeFileNamePartial!*" >nul 2>&1
@@ -1287,13 +1101,21 @@ if exist ..\client\md\hashes-wddefs-%TARGET_ARCH%-glb.txt (
 :DownloadWDDefs
 if not exist ..\client\wddefs\nul md ..\client\wddefs
 if exist ..\client\md\hashes-wddefs-%TARGET_ARCH%-glb.txt del ..\client\md\hashes-wddefs-%TARGET_ARCH%-glb.txt
-echo Downloading/validating Windows Defender definition files...
+echo Downloading/validating Windows Defender definition and platform files...
 %DLDR_PATH% %DLDR_COPT% %DLDR_UOPT% %DLDR_IOPT% ..\static\StaticDownloadLink-wddefs-%TARGET_ARCH%-glb.txt %DLDR_POPT% "..\client\wddefs\%TARGET_ARCH%-glb"
 if errorlevel 1 (
-  echo Warning: Download/validation of Windows Defender definition files failed.
-  call :Log "Warning: Download/validation of Windows Defender definition files failed"
+  echo Warning: Download/validation of Windows Defender definition and platform files failed.
+  call :Log "Warning: Download/validation of Windows Defender definition and platform files failed"
 )
-call :Log "Info: Downloaded/validated Windows Defender definition files"
+rem Microsoft's links redirect to URLs ending in "?packageType=...", which the downloader keeps
+rem in the file name (e.g. "mpam-fe.exe@packageType=..."). Rename the newest of each to the
+rem plain name the installer looks for (mpam-fe.exe = definitions, updateplatform.exe = platform).
+for %%n in (mpam-fe.exe updateplatform.exe) do (
+  for /F "delims=" %%f in ('dir /B /O:D "..\client\wddefs\%TARGET_ARCH%-glb\%%n@*" 2^>nul') do (
+    move /Y "..\client\wddefs\%TARGET_ARCH%-glb\%%f" "..\client\wddefs\%TARGET_ARCH%-glb\%%n" >nul
+  )
+)
+call :Log "Info: Downloaded/validated Windows Defender definition and platform files"
 
 rem *** Verifying digital file signatures for Windows Defender definition files ***
 if "%VERIFY_DL%" NEQ "1" goto SkipWDDefs
@@ -1359,7 +1181,7 @@ if "%TMP_PLATFORM:~-4%"=="-x64" (
 
 if "%TMP_PLATFORM%"=="w100" (
   set TMP_BUILDS_ALL_WIN10=10240 14393 17763 19041 20348
-  set TMP_BUILDS_ALL_WIN11=22000 22621 22631 26100 26200
+  set TMP_BUILDS_ALL_WIN11=22000 22621 26100
   set TMP_BUILDS_ALL_CURRENT=
   set TMP_BUILDS_LINE=
 
@@ -2523,125 +2345,6 @@ if "%4"=="/skipdownload" (
 verify >nul
 goto :eof
 
-:SDDCore
-rem %1 -> URL
-rem %2 -> Target-Path
-
-set SDDCoreReturnValue=
-
-if "%~1"=="" (
-  set SDDCoreReturnValue=1
-  goto :SDDCoreSkip
-)
-if "%~2"=="" (
-  set SDDCoreReturnValue=1
-  goto :SDDCoreSkip
-)
-
-rem ** get file name from the URL ***
-set SDDCoreFileName=
-for /f "delims=" %%f in ('%CSCRIPT_PATH% //Nologo //E:vbs ExtractFileNameFromURL.vbs "%~1"') do (
-  if not "%%f"=="" (
-    set SDDCoreFileName=%%f
-  )
-)
-if "%SDDCoreFileName%"=="" (
-  rem failed to determine file name
-  set SDDCoreReturnValue=1
-  goto :SDDCoreSkip
-)
-
-rem *** get local ETag ***
-set SDDCoreETagLocal=
-if not exist "..\static\SelfUpdateVersion-static.txt" (goto SDDCoreDownload)
-if not exist "%~2\%SDDCoreFileName%" (goto SDDCoreDownload)
-for /f "tokens=1,2 delims==" %%a in (..\static\SelfUpdateVersion-static.txt) do (
-  if /i "%SDDCoreFileName%"=="%%a" (set "SDDCoreETagLocal=%%b")
-)
-
-:SDDCoreDownload
-if "%SDDCoreETagLocal%"=="" (
-  rem not downloaded yet
-  set SDDCoreWGetCmdLine=--progress=bar:noscroll -nv --server-response -P "%~2" "%~1"
-) else (
-  rem already some version downloaded
-  set "SDDCoreWGetCmdLine=--progress=bar:noscroll -nv --server-response -P "%~2" --header="If-None-Match: %SDDCoreETagLocal:"=\"%" "%~1""
-)
-
-if exist "%~2\%SDDCoreFileName%.bak" (del "%~2\%SDDCoreFileName%.bak" >nul)
-if exist "%~2\%SDDCoreFileName%" (ren "%~2\%SDDCoreFileName%" "%SDDCoreFileName%.bak" >nul)
-
-set SDDCoreWGetBuffer=
-set SDDCoreResultBuffer=
-set SDDCoreETagBuffer=
-for /f "delims=" %%f in ('%WGET_PATH% %SDDCoreWGetCmdLine% 2^>^&1') do (
-  set SDDCoreWGetBuffer=%%f
-  if not "!SDDCoreWGetBuffer!"=="" (
-    if "!SDDCoreWGetBuffer:~2,8!"=="HTTP/1.1" (
-      set "SDDCoreResultBuffer=!SDDCoreWGetBuffer:~2!"
-    ) else if "!SDDCoreWGetBuffer:~2,4!"=="Etag" (
-      set "SDDCoreETagBuffer=!SDDCoreWGetBuffer:~8!"
-    )
-  )
-)
-
-if "%SDDCoreResultBuffer%"=="" (
-  rem no result received
-  if exist "%~2\%SDDCoreFileName%.bak" (move /y "%~2\%SDDCoreFileName%.bak" "%~2\%SDDCoreFileName%" >nul)
-  set SDDCoreReturnValue=1
-  goto :SDDCoreSkip
-)
-
-if "%SDDCoreResultBuffer:~9,3%"=="200" (
-  rem new file downloaded
-  if exist "%~2\%SDDCoreFileName%.bak" (del "%~2\%SDDCoreFileName%.bak" >nul)
-  goto SDDCoreUpdateETag
-) else if "%SDDCoreResultBuffer:~9,3%"=="304" (
-  rem nothing changed
-  if exist "%~2\%SDDCoreFileName%.bak" (move /y "%~2\%SDDCoreFileName%.bak" "%~2\%SDDCoreFileName%" >nul)
-  set SDDCoreReturnValue=0
-  goto :SDDCoreSkip
-) else if "%SDDCoreResultBuffer:~9,3%"=="412" (
-  rem nothing changed
-  if exist "%~2\%SDDCoreFileName%.bak" (move /y "%~2\%SDDCoreFileName%.bak" "%~2\%SDDCoreFileName%" >nul)
-  set SDDCoreReturnValue=0
-  goto :SDDCoreSkip
-)
-rem download error
-if exist "%~2\%SDDCoreFileName%.bak" (move /y "%~2\%SDDCoreFileName%.bak" "%~2\%SDDCoreFileName%" >nul)
-set SDDCoreReturnValue=1
-goto :SDDCoreSkip
-
-:SDDCoreUpdateETag
-if "%SDDCoreETagBuffer%"=="" (
-  rem no ETag-Header received
-  set SDDCoreReturnValue=1
-  goto :SDDCoreSkip
-)
-
-if not exist "..\static\SelfUpdateVersion-static.txt" (goto SDDCoreAddNewETag)
-move /Y ..\static\SelfUpdateVersion-static.txt ..\static\SelfUpdateVersion-static.ori >nul
-for /f "tokens=1,2 delims==" %%a in (..\static\SelfUpdateVersion-static.ori) do (
-  if not "%%a"=="%SDDCoreFileName%" (
-    echo %%a=%%b>>..\static\SelfUpdateVersion-static.txt
-  )
-)
-del ..\static\SelfUpdateVersion-static.ori
-:SDDCoreAddNewETag
-echo %SDDCoreFileName%=%SDDCoreETagBuffer%>>..\static\SelfUpdateVersion-static.txt
-set SDDCoreReturnValue=0
-
-:SDDCoreSkip
-set SDDCoreFileName=
-set SDDCoreETagLocal=
-set SDDCoreWGetCmdLine=
-set SDDCoreWGetBuffer=
-set SDDCoreResultBuffer=
-set SDDCoreETagBuffer=
-verify >nul
-rem goto EoF would be wrong here
-exit /b
-
 :RemindDate
 if "%SKIP_DL%"=="1" goto EoF
 rem *** Remind build date ***
@@ -2719,10 +2422,11 @@ call :Log "Error: Download utility %DLDR_PATH% not found"
 echo.
 goto Error
 
-:NoUnZip
+:NoTar
 echo.
-echo ERROR: Utility ..\bin\unzip.exe not found.
-call :Log "Error: Utility ..\bin\unzip.exe not found"
+echo ERROR: Windows' built-in tar.exe (%SystemRoot%\System32\tar.exe) not found.
+echo        Downloading requires Windows 10 version 1803 / Windows Server 2019 or later.
+call :Log "Error: %SystemRoot%\System32\tar.exe not found"
 echo.
 goto Error
 

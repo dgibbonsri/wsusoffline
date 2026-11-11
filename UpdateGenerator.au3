@@ -18,7 +18,6 @@
 
 Dim Const $caption                      = "WSUS Offline Update - Community Edition - 12.7 (b82)"
 Dim Const $title                        = $caption & " - Generator"
-Dim Const $downloadURL                  = "https://gitlab.com/wsusoffline/"
 Dim Const $downloadLogFile              = "download.log"
 Dim Const $runAllFile                   = "RunAll.cmd"
 Dim Const $win10_ver_inifilebody        = "Windows10Versions"
@@ -28,10 +27,10 @@ Dim Const $win10_displayversions        = "1507,1607,1809,2004/20H2/21H1/21H2/22
 Dim Const $win10_displayversions_x86    = ",,,,"
 Dim Const $win10_displayversions_x64    = ",Server 2016,Server 2019,,Server 2022"
 Dim Const $win10_defaults               = "Disabled,Enabled,Enabled,Enabled,Enabled"
-Dim Const $win11_vmax                   = 5
-Dim Const $win11_versions               = "22000,22621,22631,26100,26200"
-Dim Const $win11_displayversions        = "21H2,22H2,23H2,24H2,25H2"
-Dim Const $win11_defaults               = "Enabled,Enabled,Enabled,Enabled,Enabled"
+Dim Const $win11_vmax                   = 3
+Dim Const $win11_versions               = "22000,22621,26100"
+Dim Const $win11_displayversions        = "21H2,22H2/23H2,24H2/25H2/26H2"
+Dim Const $win11_defaults               = "Enabled,Enabled,Enabled"
 
 ; Registry constants
 Dim Const $reg_key_hkcu_desktop         = "HKEY_CURRENT_USER\Control Panel\Desktop"
@@ -131,7 +130,7 @@ Dim Const $path_rel_clientini           = "\client\UpdateInstaller.ini"
 Dim Const $path_rel_win_glb             = "\client\win\glb"
 
 Dim $maindlg, $inifilename, $tabitemfocused, $dotnet, $seconly, $wddefs, $verifydownloads, $cdiso, $dvdiso, $buildlbl
-Dim $usbcopy, $usbpath, $usbfsf, $usbclean, $imageonly, $scripting, $shutdown, $btn_start, $btn_proxy, $btn_wsus, $btn_exit, $proxy, $proxypwd, $wsus, $gergui, $dummy, $i
+Dim $usbcopy, $usbpath, $usbfsf, $usbclean, $imageonly, $scripting, $shutdown, $btn_start, $btn_proxy, $btn_wsus, $btn_exit, $proxy, $proxypwd, $wsus, $dummy, $i
 Dim $o2k13_enu   ; English
 Dim $o2k13_fra   ; French
 Dim $o2k13_esn   ; Spanish
@@ -174,18 +173,6 @@ Dim $win11_checkboxes_x64[$win11_vmax]  ; Windows 11
 
 Dim $dlgheight, $groupwidth, $groupheight_lng, $groupheight_glb, $txtwidth, $txtheight, $slimheight, $btnwidth, $btnheight, $txtxoffset, $txtyoffset, $txtxpos, $txtypos, $runany
 
-Func ShowGUIInGerman()
-  If ($CmdLine[0] > 0) Then
-    Switch StringLower($CmdLine[1])
-      Case "enu"
-        Return False
-      Case "deu"
-        Return True
-    EndSwitch
-  EndIf
-  Return ( (@OSLang = "0007") OR (@OSLang = "0407") OR (@OSLang = "0807") OR (@OSLang = "0C07") OR (@OSLang = "1007") OR (@OSLang = "1407") )
-EndFunc
-
 Func IsUNCPath($path)
   Return StringInStr($path, "\\") > 0
 EndFunc
@@ -224,11 +211,7 @@ Dim $result
 
   $result = FileReadLine(@ScriptDir & $path_rel_builddate)
   If @error Then
-    If $gergui Then
-      $result = "[Kein]"
-    Else
-      $result = "[None]"
-    EndIf
+    $result = "[None]"
   EndIf
   Return $result
 EndFunc
@@ -238,11 +221,7 @@ Dim $result
 
   $result = FileReadLine(@ScriptDir & $path_rel_catalogdate)
   If @error Then
-    If $gergui Then
-      $result = "[Kein]"
-    Else
-      $result = "[None]"
-    EndIf
+    $result = "[None]"
   EndIf
   Return $result
 EndFunc
@@ -251,152 +230,56 @@ Func ClientIniFileName()
   Return @ScriptDir & $path_rel_clientini
 EndFunc
 
-Func LanguageCaption($token, $german)
+Func LanguageCaption($token)
   Switch $token
     Case $lang_token_enu
-      If $german Then
-        Return "Englisch"
-      Else
-        Return "English"
-      EndIf
+      Return "English"
     Case $lang_token_fra
-      If $german Then
-        Return "Französisch"
-      Else
-        Return "French"
-      EndIf
+      Return "French"
     Case $lang_token_esn
-      If $german Then
-        Return "Spanisch"
-      Else
-        Return "Spanish"
-      EndIf
+      Return "Spanish"
     Case $lang_token_jpn
-      If $german Then
-        Return "Japanisch"
-      Else
-        Return "Japanese"
-      EndIf
+      Return "Japanese"
     Case $lang_token_kor
-      If $german Then
-        Return "Koreanisch"
-      Else
-        Return "Korean"
-      EndIf
+      Return "Korean"
     Case $lang_token_rus
-      If $german Then
-        Return "Russisch"
-      Else
-        Return "Russian"
-      EndIf
+      Return "Russian"
     Case $lang_token_ptg
-      If $german Then
-        Return "Portugiesisch"
-      Else
-        Return "Portuguese"
-      EndIf
+      Return "Portuguese"
     Case $lang_token_ptb
-      If $german Then
-        Return "Brasilianisch"
-      Else
-        Return "Brazilian"
-      EndIf
+      Return "Brazilian"
     Case $lang_token_deu
-      If $german Then
-        Return "Deutsch"
-      Else
-        Return "German"
-      EndIf
+      Return "German"
     Case $lang_token_nld
-      If $german Then
-        Return "Niederländisch"
-      Else
-        Return "Dutch"
-      EndIf
+      Return "Dutch"
     Case $lang_token_ita
-      If $german Then
-        Return "Italienisch"
-      Else
-        Return "Italian"
-      EndIf
+      Return "Italian"
     Case $lang_token_chs
-      If $german Then
-        Return "Chin. (simpl.)"
-      Else
-        Return "Chinese (s.)"
-      EndIf
+      Return "Chinese (s.)"
     Case $lang_token_cht
-      If $german Then
-        Return "Chin. (trad.)"
-      Else
-        Return "Chinese (tr.)"
-      EndIf
+      Return "Chinese (tr.)"
     Case $lang_token_plk
-      If $german Then
-        Return "Polnisch"
-      Else
-        Return "Polish"
-      EndIf
+      Return "Polish"
     Case $lang_token_hun
-      If $german Then
-        Return "Ungarisch"
-      Else
-        Return "Hungarian"
-      EndIf
+      Return "Hungarian"
     Case $lang_token_csy
-      If $german Then
-        Return "Tschechisch"
-      Else
-        Return "Czech"
-      EndIf
+      Return "Czech"
     Case $lang_token_sve
-      If $german Then
-        Return "Schwedisch"
-      Else
-        Return "Swedish"
-      EndIf
+      Return "Swedish"
     Case $lang_token_trk
-      If $german Then
-        Return "Türkisch"
-      Else
-        Return "Turkish"
-      EndIf
+      Return "Turkish"
     Case $lang_token_ell
-      If $german Then
-        Return "Griechisch"
-      Else
-        Return "Greek"
-      EndIf
+      Return "Greek"
     Case $lang_token_ara
-      If $german Then
-        Return "Arabisch"
-      Else
-        Return "Arabic"
-      EndIf
+      Return "Arabic"
     Case $lang_token_heb
-      If $german Then
-        Return "Hebräisch"
-      Else
-        Return "Hebrew"
-      EndIf
+      Return "Hebrew"
     Case $lang_token_dan
-      If $german Then
-        Return "Dänisch"
-      Else
-        Return "Danish"
-      EndIf
+      Return "Danish"
     Case $lang_token_nor
-      If $german Then
-        Return "Norwegisch"
-      Else
-        Return "Norwegian"
-      EndIf
+      Return "Norwegian"
     Case $lang_token_fin
-      If $german Then
-        Return "Finnisch"
-      Else
-        Return "Finnish"
-      EndIf
+      Return "Finnish"
     Case Else
       Return ""
   EndSwitch
@@ -677,53 +560,6 @@ Func ShowRunAll()
   Run("notepad.exe " & $runAllFile, @ScriptDir & "\cmd\custom")
 EndFunc
 
-Func RunVersionCheck($strproxy)
-Dim $result
-
-  DisableGUI()
-  If $strproxy = "" Then
-    $result = RunWait(@ComSpec & " /D /C CheckOUVersion.cmd /mode:newer /exitonerror", @ScriptDir & "\cmd", @SW_SHOWMINNOACTIVE)
-  Else
-    $result = RunWait(@ComSpec & " /D /C CheckOUVersion.cmd /mode:newer /exitonerror /proxy " & $strproxy, @ScriptDir & "\cmd", @SW_SHOWMINNOACTIVE)
-  EndIf
-  If @error <> 0 Then
-    If $gergui Then
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONWARNING, $MB_OK), "Warnung", "Die Versionsprüfung (CheckOUVersion.cmd) konnte nicht ausgeführt werden.")
-    Else
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONWARNING, $MB_OK), "Warning", "The version check (CheckOUVersion.cmd) could not be executed.")
-    EndIf
-    Return 0
-  EndIf
-  If $result = 1 Then
-    If $gergui Then
-      $result = MsgBox(BitOr($MB_TASKMODAL, $MB_ICONQUESTION, $MB_YESNOCANCEL), "Versionsprüfung", "Sie setzen " & $caption & " ein. Eine neuere Version ist verfügbar." _
-                       & @LF & "Möchten Sie WSUS Offline Update nun aktualisieren?")
-    Else
-      $result = MsgBox(BitOr($MB_TASKMODAL, $MB_ICONQUESTION, $MB_YESNOCANCEL), "Version check", "You are using " & $caption & ". A newer version is available." _
-                       & @LF & "Would you like to update WSUS Offline Update now?")
-    EndIf
-    Switch $result
-      Case $msgbox_btn_yes
-        $result = -1
-      Case $msgbox_btn_no
-        $result = 0
-      Case Else
-        $result = 1
-    EndSwitch
-  EndIf
-  EnableGUI()
-  Return $result
-EndFunc
-
-Func RunSelfUpdate($strproxy)
-  If $strproxy = "" Then
-    Run(@ComSpec & " /D /C UpdateOU.cmd /restartgenerator", @ScriptDir & "\cmd", @SW_SHOW)
-  Else
-    Run(@ComSpec & " /D /C UpdateOU.cmd /restartgenerator /proxy " & $strproxy, @ScriptDir & "\cmd", @SW_SHOW)
-  EndIf
-  Return 0
-EndFunc
-
 Func RunDownloadScript($stroptions, $strswitches)
 Dim $result
 
@@ -734,11 +570,7 @@ Dim $result
       $result = FileOpen(@ScriptDir & "\cmd\custom\" & $runAllFile, 2)
     EndIf
     If $result = -1 Then
-      If $gergui Then
-        MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Fehler beim Öffnen der Datei " & @ScriptDir & "\cmd\custom\" & $runAllFile)
-      Else
-        MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error opening file " & @ScriptDir & "\cmd\custom\" & $runAllFile)
-      EndIf
+      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error opening file " & @ScriptDir & "\cmd\custom\" & $runAllFile)
       Return $result
     EndIf
     FileWriteLine($result, "@pushd ..")
@@ -749,11 +581,7 @@ Dim $result
     Return 0
   EndIf
 
-  If $gergui Then
-    WinSetTitle($maindlg, $maindlg, $caption & " - Lade Updates für " & $stroptions & "...")
-  Else
-    WinSetTitle($maindlg, $maindlg, $caption & " - Downloading updates for " & $stroptions & "...")
-  EndIf
+  WinSetTitle($maindlg, $maindlg, $caption & " - Downloading updates for " & $stroptions & "...")
   DisableGUI()
   If IniRead($inifilename, $ini_section_misc, $misc_token_minimize, $disabled) = $enabled Then
     $result = RunWait(@ComSpec & " /D /C DownloadUpdates.cmd " & $stroptions & $strswitches, @ScriptDir & "\cmd", @SW_SHOWMINNOACTIVE)
@@ -765,23 +593,12 @@ Dim $result
   EndIf
   If $result = 0 Then
     $runany = True
-    If $gergui Then
-      GUICtrlSetData($buildlbl, "Letzter Download: " & LastDownloadRun() & ", Katalogdatum: " & CatalogDate())
-    Else
-      GUICtrlSetData($buildlbl, "Last download: " & LastDownloadRun() & ", catalog date: " & CatalogDate())
-    EndIf
+    GUICtrlSetData($buildlbl, "Last download: " & LastDownloadRun() & ", catalog date: " & CatalogDate())
   Else
     WinSetState($maindlg, $maindlg, @SW_RESTORE)
-    If $gergui Then
-      If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_YESNO), "Fehler", "Fehler beim Herunterladen / Verifizieren der Updates für " & $stroptions & "." _
-                & @LF & "Möchten Sie nun die Protokolldatei ansehen?") = $msgbox_btn_yes Then
-        ShowLogFile()
-      EndIf
-    Else
-      If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_YESNO), "Error", "Error downloading / verifying updates for " & $stroptions & "." _
-                & @LF & "Would you like to view the log file now?") = $msgbox_btn_yes Then
-        ShowLogFile()
-      EndIf
+    If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_YESNO), "Error", "Error downloading / verifying updates for " & $stroptions & "." _
+              & @LF & "Would you like to view the log file now?") = $msgbox_btn_yes Then
+      ShowLogFile()
     EndIf
   EndIf
   WinSetTitle($maindlg, $maindlg, $title)
@@ -799,11 +616,7 @@ Dim $result
       $result = FileOpen(@ScriptDir & "\cmd\custom\" & $runAllFile, 2)
     EndIf
     If $result = -1 Then
-      If $gergui Then
-        MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Fehler beim Öffnen der Datei " & @ScriptDir & "\cmd\custom\" & $runAllFile)
-      Else
-        MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error opening file " & @ScriptDir & "\cmd\custom\" & $runAllFile)
-      EndIf
+      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error opening file " & @ScriptDir & "\cmd\custom\" & $runAllFile)
       Return $result
     EndIf
     FileWriteLine($result, "@pushd ..")
@@ -814,11 +627,7 @@ Dim $result
     Return 0
   EndIf
 
-  If $gergui Then
-    WinSetTitle($maindlg, $maindlg, $caption & " - Erstelle ISO-Image für " & $stroptions & "...")
-  Else
-    WinSetTitle($maindlg, $maindlg, $caption & " - Creating ISO image for " & $stroptions & "...")
-  EndIf
+  WinSetTitle($maindlg, $maindlg, $caption & " - Creating ISO image for " & $stroptions & "...")
   DisableGUI()
   If IniRead($inifilename, $ini_section_misc, $misc_token_minimize, $disabled) = $enabled Then
     $result = RunWait(@ComSpec & " /D /C CreateISOImage.cmd " & $stroptions & $strswitches, @ScriptDir & "\cmd", @SW_SHOWMINNOACTIVE)
@@ -832,11 +641,7 @@ Dim $result
     $runany = True
   Else
     WinSetState($maindlg, $maindlg, @SW_RESTORE)
-    If $gergui Then
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Fehler beim Erstellen des ISO-Images für " & $stroptions & ".")
-    Else
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error creating ISO image for " & $stroptions & ".")
-    EndIf
+    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error creating ISO image for " & $stroptions & ".")
   EndIf
   WinSetTitle($maindlg, $maindlg, $title)
   EnableGUI()
@@ -853,11 +658,7 @@ Dim $result
       $result = FileOpen(@ScriptDir & "\cmd\custom\" & $runAllFile, 2)
     EndIf
     If $result = -1 Then
-      If $gergui Then
-        MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Fehler beim Öffnen der Datei " & @ScriptDir & "\cmd\custom\" & $runAllFile)
-      Else
-        MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error opening file " & @ScriptDir & "\cmd\custom\" & $runAllFile)
-      EndIf
+      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error opening file " & @ScriptDir & "\cmd\custom\" & $runAllFile)
       Return $result
     EndIf
     FileWriteLine($result, "@pushd ..")
@@ -870,18 +671,10 @@ Dim $result
 
   $result = 0
   If NOT FileExists($strpath) Then
-    If $gergui Then
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONWARNING, $MB_OK), "Warnung", "Das Zielverzeichnis """ & $strpath & """ existiert nicht.")
-    Else
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONWARNING, $MB_OK), "Warning", "The target directory """ & $strpath & """ does not exist.")
-    EndIf
+    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONWARNING, $MB_OK), "Warning", "The target directory """ & $strpath & """ does not exist.")
     Return $result
   EndIf
-  If $gergui Then
-    WinSetTitle($maindlg, $maindlg, $caption & " - Kopiere Dateien für " & $stroptions & "...")
-  Else
-    WinSetTitle($maindlg, $maindlg, $caption & " - Copying files for " & $stroptions & "...")
-  EndIf
+  WinSetTitle($maindlg, $maindlg, $caption & " - Copying files for " & $stroptions & "...")
   DisableGUI()
   If IniRead($inifilename, $ini_section_misc, $misc_token_minimize, $disabled) = $enabled Then
     $result = RunWait(@ComSpec & " /D /C CopyToTarget.cmd " & $stroptions & " """ & $strpath & """" & $strswitches, @ScriptDir & "\cmd", @SW_SHOWMINNOACTIVE)
@@ -895,11 +688,7 @@ Dim $result
     $runany = True
   Else
     WinSetState($maindlg, $maindlg, @SW_RESTORE)
-    If $gergui Then
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Fehler beim Kopieren der Dateien für " & $stroptions & ".")
-    Else
-      MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error copying files for " & $stroptions & ".")
-    EndIf
+    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "Error copying files for " & $stroptions & ".")
   EndIf
   WinSetTitle($maindlg, $maindlg, $title)
   EnableGUI()
@@ -1017,11 +806,7 @@ Func CalcGUISize()
     $reg_val = $default_logpixels
   EndIf
   $dlgheight = 380 * $reg_val / $default_logpixels
-  If $gergui Then
-    $txtwidth = 90 * $reg_val / $default_logpixels
-  Else
-    $txtwidth = 80 * $reg_val / $default_logpixels
-  EndIf
+  $txtwidth = 80 * $reg_val / $default_logpixels
   $txtheight = 20 * $reg_val / $default_logpixels
   $slimheight = 15 * $reg_val / $default_logpixels
   $btnwidth = 80 * $reg_val / $default_logpixels
@@ -1035,7 +820,6 @@ EndFunc
 AutoItSetOption("GUICloseOnESC", 0)
 AutoItSetOption("TrayAutoPause", 0)
 AutoItSetOption("TrayIconHide", 1)
-$gergui = ShowGUIInGerman()
 CalcGUISize()
 $groupwidth = 8 * $txtwidth + 2 * $txtxoffset
 $groupheight_lng = 4 * $txtheight
@@ -1052,27 +836,15 @@ $win10_ver_inifilename = StringLeft(@ScriptFullPath, StringInStr(@ScriptFullPath
 ;  Label
 $txtxpos = $txtxoffset
 $txtypos = $txtyoffset
-If $gergui Then
-  GUICtrlCreateLabel("Lade Microsoft-Updates für...", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  GUICtrlCreateLabel("Download Microsoft updates for...", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+GUICtrlCreateLabel("Download Microsoft updates for...", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 
 ;  Medium info group
 $txtxpos = $txtxoffset + $groupwidth / 2 + $txtxoffset
 $txtypos = 0
-If $gergui Then
-  GUICtrlCreateGroup("Repository-Info", $txtxpos, $txtypos, $groupwidth / 2 + $txtxoffset, 2 * $txtheight)
-Else
-  GUICtrlCreateGroup("Repository info", $txtxpos, $txtypos, $groupwidth / 2 + $txtxoffset, 2 * $txtheight)
-EndIf
+GUICtrlCreateGroup("Repository info", $txtxpos, $txtypos, $groupwidth / 2 + $txtxoffset, 2 * $txtheight)
 $txtxpos = $txtxpos + $txtxoffset
 $txtypos = $txtypos + 1.5 * $txtyoffset + 2
-If $gergui Then
-  $buildlbl = GUICtrlCreateLabel("Letzter Download: " & LastDownloadRun() & ", Katalogdatum: " & CatalogDate(), $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-Else
-  $buildlbl = GUICtrlCreateLabel("Last download: " & LastDownloadRun() & ", catalog date: " & CatalogDate(), $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-EndIf
+$buildlbl = GUICtrlCreateLabel("Last download: " & LastDownloadRun() & ", catalog date: " & CatalogDate(), $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
 
 ;  Tab control
 $txtxpos = $txtxoffset
@@ -1094,7 +866,7 @@ GUICtrlCreateGroup("Windows 11 versions", $txtxpos, $txtypos, $groupwidth, 3 * $
 $txtypos = $txtypos + 1.5 * $txtyoffset
 $txtxpos = 3 * $txtxoffset
 For $i = 0 To $win11_ver_arr[0] - 1
-  $win11_checkboxes_x64[$i] = GUICtrlCreateCheckbox($win11_dsp_arr[$i+1], $txtxpos + Mod($i, 8) * ($groupwidth / 8 - $txtxoffset), $txtypos + BitShift($i, 3) * $txtheight, $groupwidth / 8 - $txtxoffset, $txtheight)
+  $win11_checkboxes_x64[$i] = GUICtrlCreateCheckbox($win11_dsp_arr[$i+1], $txtxpos + Mod($i, 2) * ($groupwidth / 4 - $txtxoffset), $txtypos + BitShift($i, 1) * $txtheight, $groupwidth / 4 - $txtxoffset, $txtheight)
   If IniRead($win10_ver_inifilename, $ini_section_win11_ver, $win11_ver_arr[$i+1] & "_x64", $win11_def_arr[$i+1]) = $enabled Then
     GUICtrlSetState(-1, $GUI_CHECKED)
   Else
@@ -1198,7 +970,7 @@ GUICtrlCreateGroup("Office 2013 (o2k13)", $txtxpos, $txtypos, $groupwidth, $grou
 ;  Office 2013 English
 $txtypos = $txtypos + 1.5 * $txtyoffset
 $txtxpos = 3 * $txtxoffset
-$o2k13_enu = GUICtrlCreateCheckbox(LanguageCaption($lang_token_enu, $gergui), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
+$o2k13_enu = GUICtrlCreateCheckbox(LanguageCaption($lang_token_enu), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_enu, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1206,7 +978,7 @@ Else
 EndIf
 ;  Office 2013 French
 $txtxpos = $txtxpos + $txtwidth - 5
-$o2k13_fra = GUICtrlCreateCheckbox(LanguageCaption($lang_token_fra, $gergui), $txtxpos, $txtypos, $txtwidth + 10, $txtheight)
+$o2k13_fra = GUICtrlCreateCheckbox(LanguageCaption($lang_token_fra), $txtxpos, $txtypos, $txtwidth + 10, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_fra, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1214,7 +986,7 @@ Else
 EndIf
 ;  Office 2013 Spanish
 $txtxpos = $txtxpos + $txtwidth + 10
-$o2k13_esn = GUICtrlCreateCheckbox(LanguageCaption($lang_token_esn, $gergui), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
+$o2k13_esn = GUICtrlCreateCheckbox(LanguageCaption($lang_token_esn), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_esn, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1222,7 +994,7 @@ Else
 EndIf
 ;  Office 2013 Japanese
 $txtxpos = $txtxpos + $txtwidth - 5
-$o2k13_jpn = GUICtrlCreateCheckbox(LanguageCaption($lang_token_jpn, $gergui), $txtxpos, $txtypos, $txtwidth, $txtheight)
+$o2k13_jpn = GUICtrlCreateCheckbox(LanguageCaption($lang_token_jpn), $txtxpos, $txtypos, $txtwidth, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_jpn, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1230,7 +1002,7 @@ Else
 EndIf
 ;  Office 2013 Korean
 $txtxpos = $txtxpos + $txtwidth
-$o2k13_kor = GUICtrlCreateCheckbox(LanguageCaption($lang_token_kor, $gergui), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
+$o2k13_kor = GUICtrlCreateCheckbox(LanguageCaption($lang_token_kor), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_kor, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1238,7 +1010,7 @@ Else
 EndIf
 ;  Office 2013 Russian
 $txtxpos = $txtxpos + $txtwidth + 5
-$o2k13_rus = GUICtrlCreateCheckbox(LanguageCaption($lang_token_rus, $gergui), $txtxpos, $txtypos, $txtwidth - 10, $txtheight)
+$o2k13_rus = GUICtrlCreateCheckbox(LanguageCaption($lang_token_rus), $txtxpos, $txtypos, $txtwidth - 10, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_rus, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1246,7 +1018,7 @@ Else
 EndIf
 ;  Office 2013 Portuguese
 $txtxpos = $txtxpos + $txtwidth - 10
-$o2k13_ptg = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ptg, $gergui), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
+$o2k13_ptg = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ptg), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_ptg, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1254,7 +1026,7 @@ Else
 EndIf
 ;  Office 2013 Brazilian
 $txtxpos = $txtxpos + $txtwidth + 5
-$o2k13_ptb = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ptb, $gergui), $txtxpos, $txtypos, $txtwidth, $txtheight)
+$o2k13_ptb = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ptb), $txtxpos, $txtypos, $txtwidth, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_ptb, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1263,7 +1035,7 @@ EndIf
 ;  Office 2013 German
 $txtxpos = 3 * $txtxoffset
 $txtypos = $txtypos + $txtheight
-$o2k13_deu = GUICtrlCreateCheckbox(LanguageCaption($lang_token_deu, $gergui), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
+$o2k13_deu = GUICtrlCreateCheckbox(LanguageCaption($lang_token_deu), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_deu, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1271,7 +1043,7 @@ Else
 EndIf
 ;  Office 2013 Dutch
 $txtxpos = $txtxpos + $txtwidth - 5
-$o2k13_nld = GUICtrlCreateCheckbox(LanguageCaption($lang_token_nld, $gergui), $txtxpos, $txtypos, $txtwidth + 10, $txtheight)
+$o2k13_nld = GUICtrlCreateCheckbox(LanguageCaption($lang_token_nld), $txtxpos, $txtypos, $txtwidth + 10, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_nld, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1279,7 +1051,7 @@ Else
 EndIf
 ;  Office 2013 Italian
 $txtxpos = $txtxpos + $txtwidth + 10
-$o2k13_ita = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ita, $gergui), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
+$o2k13_ita = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ita), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_ita, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1287,7 +1059,7 @@ Else
 EndIf
 ;  Office 2013 Chinese simplified
 $txtxpos = $txtxpos + $txtwidth - 5
-$o2k13_chs = GUICtrlCreateCheckbox(LanguageCaption($lang_token_chs, $gergui), $txtxpos, $txtypos, $txtwidth, $txtheight)
+$o2k13_chs = GUICtrlCreateCheckbox(LanguageCaption($lang_token_chs), $txtxpos, $txtypos, $txtwidth, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_chs, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1295,7 +1067,7 @@ Else
 EndIf
 ;  Office 2013 Chinese traditional
 $txtxpos = $txtxpos + $txtwidth
-$o2k13_cht = GUICtrlCreateCheckbox(LanguageCaption($lang_token_cht, $gergui), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
+$o2k13_cht = GUICtrlCreateCheckbox(LanguageCaption($lang_token_cht), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_cht, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1303,7 +1075,7 @@ Else
 EndIf
 ;  Office 2013 Polish
 $txtxpos = $txtxpos + $txtwidth + 5
-$o2k13_plk = GUICtrlCreateCheckbox(LanguageCaption($lang_token_plk, $gergui), $txtxpos, $txtypos, $txtwidth - 10, $txtheight)
+$o2k13_plk = GUICtrlCreateCheckbox(LanguageCaption($lang_token_plk), $txtxpos, $txtypos, $txtwidth - 10, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_plk, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1311,7 +1083,7 @@ Else
 EndIf
 ;  Office 2013 Hungarian
 $txtxpos = $txtxpos + $txtwidth - 10
-$o2k13_hun = GUICtrlCreateCheckbox(LanguageCaption($lang_token_hun, $gergui), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
+$o2k13_hun = GUICtrlCreateCheckbox(LanguageCaption($lang_token_hun), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_hun, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1319,7 +1091,7 @@ Else
 EndIf
 ;  Office 2013 Czech
 $txtxpos = $txtxpos + $txtwidth + 5
-$o2k13_csy = GUICtrlCreateCheckbox(LanguageCaption($lang_token_csy, $gergui), $txtxpos, $txtypos, $txtwidth, $txtheight)
+$o2k13_csy = GUICtrlCreateCheckbox(LanguageCaption($lang_token_csy), $txtxpos, $txtypos, $txtwidth, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_csy, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1328,7 +1100,7 @@ EndIf
 ;  Office 2013 Swedish
 $txtxpos = 3 * $txtxoffset
 $txtypos = $txtypos + $txtheight
-$o2k13_sve = GUICtrlCreateCheckbox(LanguageCaption($lang_token_sve, $gergui), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
+$o2k13_sve = GUICtrlCreateCheckbox(LanguageCaption($lang_token_sve), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_sve, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1336,7 +1108,7 @@ Else
 EndIf
 ;  Office 2013 Turkish
 $txtxpos = $txtxpos + $txtwidth - 5
-$o2k13_trk = GUICtrlCreateCheckbox(LanguageCaption($lang_token_trk, $gergui), $txtxpos, $txtypos, $txtwidth + 10, $txtheight)
+$o2k13_trk = GUICtrlCreateCheckbox(LanguageCaption($lang_token_trk), $txtxpos, $txtypos, $txtwidth + 10, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_trk, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1344,7 +1116,7 @@ Else
 EndIf
 ;  Office 2013 Greek
 $txtxpos = $txtxpos + $txtwidth + 10
-$o2k13_ell = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ell, $gergui), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
+$o2k13_ell = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ell), $txtxpos, $txtypos, $txtwidth - 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_ell, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1352,7 +1124,7 @@ Else
 EndIf
 ;  Office 2013 Arabic
 $txtxpos = $txtxpos + $txtwidth - 5
-$o2k13_ara = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ara, $gergui), $txtxpos, $txtypos, $txtwidth, $txtheight)
+$o2k13_ara = GUICtrlCreateCheckbox(LanguageCaption($lang_token_ara), $txtxpos, $txtypos, $txtwidth, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_ara, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1360,7 +1132,7 @@ Else
 EndIf
 ;  Office 2013 Hebrew
 $txtxpos = $txtxpos + $txtwidth
-$o2k13_heb = GUICtrlCreateCheckbox(LanguageCaption($lang_token_heb, $gergui), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
+$o2k13_heb = GUICtrlCreateCheckbox(LanguageCaption($lang_token_heb), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_heb, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1368,7 +1140,7 @@ Else
 EndIf
 ;  Office 2013 Danish
 $txtxpos = $txtxpos + $txtwidth + 5
-$o2k13_dan = GUICtrlCreateCheckbox(LanguageCaption($lang_token_dan, $gergui), $txtxpos, $txtypos, $txtwidth - 10, $txtheight)
+$o2k13_dan = GUICtrlCreateCheckbox(LanguageCaption($lang_token_dan), $txtxpos, $txtypos, $txtwidth - 10, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_dan, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1376,7 +1148,7 @@ Else
 EndIf
 ;  Office 2013 Norwegian
 $txtxpos = $txtxpos + $txtwidth - 10
-$o2k13_nor = GUICtrlCreateCheckbox(LanguageCaption($lang_token_nor, $gergui), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
+$o2k13_nor = GUICtrlCreateCheckbox(LanguageCaption($lang_token_nor), $txtxpos, $txtypos, $txtwidth + 5, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_nor, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1384,7 +1156,7 @@ Else
 EndIf
 ;  Office 2013 Finnish
 $txtxpos = $txtxpos + $txtwidth + 5
-$o2k13_fin = GUICtrlCreateCheckbox(LanguageCaption($lang_token_fin, $gergui), $txtxpos, $txtypos, $txtwidth, $txtheight)
+$o2k13_fin = GUICtrlCreateCheckbox(LanguageCaption($lang_token_fin), $txtxpos, $txtypos, $txtwidth, $txtheight)
 If IniRead($inifilename, $ini_section_o2k13, $lang_token_fin, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1398,11 +1170,7 @@ GUICtrlCreateGroup("Office 2016 (o2k16)", $txtxpos, $txtypos, $groupwidth, $grou
 ;  Office 2016 global
 $txtypos = $txtypos + 1.5 * $txtyoffset
 $txtxpos = 3 * $txtxoffset
-If $gergui Then
-  $o2k16_glb = GUICtrlCreateCheckbox("Global (mehrsprachige Updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-Else
-  $o2k16_glb = GUICtrlCreateCheckbox("Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-EndIf
+$o2k16_glb = GUICtrlCreateCheckbox("Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
 If IniRead($inifilename, $ini_section_o2k16, $lang_token_glb, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1410,11 +1178,7 @@ Else
 EndIf
 
 ;  Legacy Windows Tab
-If ShowGUIInGerman() Then
-  GuiCtrlCreateTabItem("Altprodukte (Windows)")
-Else
-  GuiCtrlCreateTabItem("Legacy Windows")
-EndIf
+GuiCtrlCreateTabItem("Legacy Windows")
 
 ;  Windows Server 2012 group
 $txtxpos = 2 * $txtxoffset
@@ -1423,11 +1187,7 @@ GUICtrlCreateGroup("Windows Server 2012 (w62-x64)", $txtxpos, $txtypos, $groupwi
 ;  Windows Server 2012 x64 global
 $txtypos = $txtypos + 1.5 * $txtyoffset
 $txtxpos = 3 * $txtxoffset + $groupwidth / 2 - $txtxoffset
-If $gergui Then
-  $w62_x64_glb = GUICtrlCreateCheckbox("x64 Global (mehrsprachige Updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-Else
-  $w62_x64_glb = GUICtrlCreateCheckbox("x64 Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-EndIf
+$w62_x64_glb = GUICtrlCreateCheckbox("x64 Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
 If IniRead($inifilename, $ini_section_w62_x64, $lang_token_glb, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1441,11 +1201,7 @@ GUICtrlCreateGroup("Windows 8.1 / Server 2012 R2 (w63 / w63-x64)", $txtxpos, $tx
 ;  Windows 8.1 global
 $txtypos = $txtypos + 1.5 * $txtyoffset
 $txtxpos = 3 * $txtxoffset
-If $gergui Then
-  $w63_glb = GUICtrlCreateCheckbox("x86 Global (mehrsprachige Updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-Else
-  $w63_glb = GUICtrlCreateCheckbox("x86 Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-EndIf
+$w63_glb = GUICtrlCreateCheckbox("x86 Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
 If IniRead($inifilename, $ini_section_w63, $lang_token_glb, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1453,11 +1209,7 @@ Else
 EndIf
 ;  Windows 8.1 / Server 2012 R2 x64 global
 $txtxpos = $txtxpos + $groupwidth / 2 - $txtxoffset
-If $gergui Then
-  $w63_x64_glb = GUICtrlCreateCheckbox("x64 Global (mehrsprachige Updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-Else
-  $w63_x64_glb = GUICtrlCreateCheckbox("x64 Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
-EndIf
+$w63_x64_glb = GUICtrlCreateCheckbox("x64 Global (multilingual updates)", $txtxpos, $txtypos, $groupwidth / 2 - $txtxoffset, $txtheight)
 If IniRead($inifilename, $ini_section_w63_x64, $lang_token_glb, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1467,19 +1219,11 @@ EndIf
 ;  Product Lifecycle group
 $txtxpos = 2 * $txtxoffset
 $txtypos = $txtypos + 2.5 * $txtyoffset
-If ShowGUIInGerman() Then
-  GUICtrlCreateGroup("Produkt-Lebenszyklus-Informationen", $txtxpos, $txtypos, $groupwidth, $groupheight_glb)
-Else
-  GUICtrlCreateGroup("Product lifecycle information", $txtxpos, $txtypos, $groupwidth, $groupheight_glb)
-EndIf
+GUICtrlCreateGroup("Product lifecycle information", $txtxpos, $txtypos, $groupwidth, $groupheight_glb)
 ;  Product Lifecycle label
 $txtypos = $txtypos + 2 * $txtyoffset
 $txtxpos = 3 * $txtxoffset
-If ShowGUIInGerman() Then
-  GUICtrlCreateLabel("Microsoft wird die Unterstützung für Windows Server 2012(R2) am 10. Jan. 2023 einstellen.", $txtxpos, $txtypos, $groupwidth - 2 * $txtxoffset, $txtheight)
-Else
-  GUICtrlCreateLabel("Microsoft will discontinue support for Windows Server 2012(R2) on Jan. 10th, 2023.", $txtxpos, $txtypos, $groupwidth - 2 * $txtxoffset, $txtheight)
-EndIf
+GUICtrlCreateLabel("Microsoft will discontinue support for Windows Server 2012(R2) on Jan. 10th, 2023.", $txtxpos, $txtypos, $groupwidth - 2 * $txtxoffset, $txtheight)
 
 ;  End Tab item definition
 GuiCtrlCreateTabItem("")
@@ -1489,20 +1233,12 @@ GUICtrlSetState($tabitemfocused, $GUI_SHOW)
 $txtxpos = $txtxoffset
 $txtypos = 3 * $groupheight_glb + 7 * $txtyoffset
 
-If $gergui Then
-  GUICtrlCreateGroup("Optionen", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  3 * $txtheight)
-Else
-  GUICtrlCreateGroup("Options", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  3 * $txtheight)
-EndIf
+GUICtrlCreateGroup("Options", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  3 * $txtheight)
 
 ;  Verify downloads
 $txtxpos = 2 * $txtxoffset
 $txtypos = $txtypos + 1.5 * $txtyoffset
-If $gergui Then
-  $verifydownloads = GUICtrlCreateCheckbox("Heruntergeladene Updates verifizieren", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  $verifydownloads = GUICtrlCreateCheckbox("Verify downloaded updates", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+$verifydownloads = GUICtrlCreateCheckbox("Verify downloaded updates", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 If IniRead($inifilename, $ini_section_opts, $opts_token_verify, $enabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1514,11 +1250,7 @@ EndIf
 
 ;  Security Only Updates
 $txtxpos = $txtxpos + $groupwidth / 2
-If $gergui Then
-  $seconly = GUICtrlCreateCheckbox("'Reine Sicherheitsupdates' anstelle von 'Qualitätsrollups' verwenden", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  $seconly = GUICtrlCreateCheckbox("Use 'security only updates' instead of 'quality rollups'", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+$seconly = GUICtrlCreateCheckbox("Use 'security only updates' instead of 'quality rollups'", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 If IniRead($inifilename, $ini_section_opts, $opts_token_seconly, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1531,11 +1263,7 @@ EndIf
 ;  Include .NET Frameworks
 $txtxpos = 2 * $txtxoffset
 $txtypos = $txtypos + $txtheight
-If $gergui Then
-  $dotnet = GUICtrlCreateCheckbox("C++-Laufzeitbibliotheken und .NET Frameworks einschließen", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  $dotnet = GUICtrlCreateCheckbox("Include C++ Runtime Libraries and .NET Frameworks", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+$dotnet = GUICtrlCreateCheckbox("Include C++ Runtime Libraries and .NET Frameworks", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 If IniRead($inifilename, $ini_section_opts, $opts_token_allowdotnet, $enabled) = $enabled Then
   If IniRead($inifilename, $ini_section_opts, $opts_token_includedotnet, $enabled) = $enabled Then
     GUICtrlSetState(-1, $GUI_CHECKED)
@@ -1548,11 +1276,7 @@ EndIf
 
 ;  Include Windows Defender definitions
 $txtxpos = $txtxpos + $groupwidth / 2
-If $gergui Then
-  $wddefs = GUICtrlCreateCheckbox("Windows Defender-Definitionen einschließen", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  $wddefs = GUICtrlCreateCheckbox("Include Windows Defender definitions", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+$wddefs = GUICtrlCreateCheckbox("Include Windows Defender definitions and platform", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 If IniRead($inifilename, $ini_section_opts, $opts_token_wddefs, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1565,20 +1289,12 @@ EndIf
 ;  ISO-Image group
 $txtxpos = $txtxoffset
 $txtypos = $txtypos + 2.5 * $txtyoffset
-If $gergui Then
-  GUICtrlCreateGroup("Erstelle ISO-Image(s)...", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  $groupheight_glb)
-Else
-  GUICtrlCreateGroup("Create ISO image(s)...", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  $groupheight_glb)
-EndIf
+GUICtrlCreateGroup("Create ISO image(s)...", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  $groupheight_glb)
 
 ;  CD ISO image
 $txtypos = $txtypos + 1.5 * $txtyoffset
 $txtxpos = 2 * $txtxoffset
-If $gergui Then
-  $cdiso = GUICtrlCreateCheckbox("pro Produkt und Sprache", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  $cdiso = GUICtrlCreateCheckbox("per selected product and language", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+$cdiso = GUICtrlCreateCheckbox("per selected product and language", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 If IniRead($inifilename, $ini_section_misc, $misc_token_skipdownload, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_UNCHECKED + $GUI_DISABLE)
 Else
@@ -1591,11 +1307,7 @@ EndIf
 
 ;  cross-platform DVD ISO image
 $txtxpos = $txtxpos + $groupwidth / 2
-If $gergui Then
-  $dvdiso = GUICtrlCreateCheckbox("pro Sprache, x86-produktübergreifend (nur Desktop-Produkte)", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  $dvdiso = GUICtrlCreateCheckbox("per selected language, 'x86-cross-product' (desktop only)", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+$dvdiso = GUICtrlCreateCheckbox("per selected language, 'x86-cross-product' (desktop only)", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 If IniRead($inifilename, $ini_section_misc, $misc_token_skipdownload, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_UNCHECKED + $GUI_DISABLE)
 Else
@@ -1609,20 +1321,12 @@ EndIf
 ;  USB-Image group
 $txtxpos = $txtxoffset
 $txtypos = $txtypos + 2.5 * $txtyoffset
-If $gergui Then
-  GUICtrlCreateGroup("USB-Medium", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  $groupheight_glb)
-Else
-  GUICtrlCreateGroup("USB medium", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  $groupheight_glb)
-EndIf
+GUICtrlCreateGroup("USB medium", $txtxpos, $txtypos, $groupwidth + 2 * $txtxoffset,  $groupheight_glb)
 
 ;  USB image
 $txtypos = $txtypos + 1.5 * $txtyoffset
 $txtxpos = 2 * $txtxoffset
-If $gergui Then
-  $usbcopy = GUICtrlCreateCheckbox("Kopiere Updates für gewählte Produkte ins Verzeichnis:", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-Else
-  $usbcopy = GUICtrlCreateCheckbox("Copy updates for selected products into directory:", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
-EndIf
+$usbcopy = GUICtrlCreateCheckbox("Copy updates for selected products into directory:", $txtxpos, $txtypos, $groupwidth / 2, $txtheight)
 If IniRead($inifilename, $ini_section_misc, $misc_token_skipdownload, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_UNCHECKED + $GUI_DISABLE)
 Else
@@ -1642,11 +1346,7 @@ $txtxpos = $txtxpos + 2 * $txtwidth - $txtxoffset - $txtheight
 $usbfsf = GUICtrlCreateButton("...", $txtxpos, $txtypos - 2, $txtheight, $txtheight)
 ;  USB cleanup
 $txtxpos = $txtxpos + $txtheight + $txtxoffset
-If $gergui Then
-  $usbclean = GUICtrlCreateCheckbox("Zielverzeichnis bereinigen", $txtxpos, $txtypos, 2 * $txtwidth, $txtheight)
-Else
-  $usbclean = GUICtrlCreateCheckbox("Clean up target directory", $txtxpos, $txtypos, 2 * $txtwidth, $txtheight)
-EndIf
+$usbclean = GUICtrlCreateCheckbox("Clean up target directory", $txtxpos, $txtypos, 2 * $txtwidth, $txtheight)
 If IniRead($inifilename, $ini_section_usb, $usb_token_cleanup, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_CHECKED)
 Else
@@ -1670,11 +1370,7 @@ GUICtrlSetResizing(-1, $GUI_DOCKLEFT + $GUI_DOCKBOTTOM)
 
 ;  Image only checkbox
 $txtxpos = $txtxpos + $btnwidth + $txtxoffset
-If $gergui Then
-  $imageonly = GUICtrlCreateCheckbox("Nur ISO / USB präparieren", $txtxpos, $txtypos, 2 * $txtwidth, $slimheight)
-Else
-  $imageonly = GUICtrlCreateCheckbox("Only prepare ISO / USB", $txtxpos, $txtypos, 2 * $txtwidth, $slimheight)
-EndIf
+$imageonly = GUICtrlCreateCheckbox("Only prepare ISO / USB", $txtxpos, $txtypos, 2 * $txtwidth, $slimheight)
 If IniRead($inifilename, $ini_section_misc, $misc_token_skipdownload, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_DISABLE)
 EndIf
@@ -1683,21 +1379,13 @@ If NOT (IsCheckBoxChecked($cdiso) OR IsCheckBoxChecked($dvdiso) OR IsCheckBoxChe
 EndIf
 
 ;  Scripting checkbox
-If $gergui Then
-  $scripting = GUICtrlCreateCheckbox("Nur Sammelskript erstellen", $txtxpos, $txtypos + $slimheight, 2 * $txtwidth, $slimheight)
-Else
-  $scripting = GUICtrlCreateCheckbox("Only create collection script", $txtxpos, $txtypos + $slimheight, 2 * $txtwidth, $slimheight)
-EndIf
+$scripting = GUICtrlCreateCheckbox("Only create collection script", $txtxpos, $txtypos + $slimheight, 2 * $txtwidth, $slimheight)
 If IniRead($inifilename, $ini_section_misc, $misc_token_showshutdown, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_HIDE)
 EndIf
 
 ;  Shutdown checkbox
-If $gergui Then
-  $shutdown = GUICtrlCreateCheckbox("Herunterfahren nach Abschluss", $txtxpos, $txtypos + $slimheight, 2 * $txtwidth, $slimheight)
-Else
-  $shutdown = GUICtrlCreateCheckbox("Shut down on completion", $txtxpos, $txtypos + $slimheight, 2 * $txtwidth, $slimheight)
-EndIf
+$shutdown = GUICtrlCreateCheckbox("Shut down on completion", $txtxpos, $txtypos + $slimheight, 2 * $txtwidth, $slimheight)
 If IniRead($inifilename, $ini_section_misc, $misc_token_skipdownload, $disabled) = $enabled Then
   GUICtrlSetState(-1, $GUI_DISABLE)
 EndIf
@@ -1723,61 +1411,33 @@ $wsus = IniRead($inifilename, $ini_section_misc, $misc_token_wsus, "")
 
 ;  Exit button
 $txtxpos = 3 * $txtxoffset + $groupwidth - $btnwidth
-If $gergui Then
-  $btn_exit = GUICtrlCreateButton("Ende", $txtxpos, $txtypos, $btnwidth, $btnheight)
-Else
-  $btn_exit = GUICtrlCreateButton("Exit", $txtxpos, $txtypos, $btnwidth, $btnheight)
-EndIf
+$btn_exit = GUICtrlCreateButton("Exit", $txtxpos, $txtypos, $btnwidth, $btnheight)
 GUICtrlSetResizing(-1, $GUI_DOCKRIGHT + $GUI_DOCKBOTTOM)
 
 ; GUI message loop
 GUISetState()
 If IsUNCPath(@ScriptDir) Then
-  If $gergui Then
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Das Skript wurde von einem UNC-Pfad gestartet." _
-                     & @LF & "Bitte weisen Sie der Netzwerkfreigabe einen Laufwerksbuchstaben zu.")
-  Else
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The script was startet from a UNC path." _
-                    & @LF & "Please map a drive letter to the network share.")
-  EndIf
+  MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The script was startet from a UNC path." _
+                  & @LF & "Please map a drive letter to the network share.")
   Exit(1)
 EndIf
 If NOT PathValid(@ScriptDir) Then
-  If $gergui Then
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Der Skript-Pfad darf nicht mehr als " & $path_max_length & " Zeichen lang sein und" _
-                     & @LF & "darf keines der folgenden Zeichen enthalten: " & $path_invalid_chars)
-  Else
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The script path must not be more than " & $path_max_length & " characters long and" _
-                    & @LF & "must not contain any of the following characters: " & $path_invalid_chars)
-  EndIf
+  MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The script path must not be more than " & $path_max_length & " characters long and" _
+                  & @LF & "must not contain any of the following characters: " & $path_invalid_chars)
   Exit(1)
 EndIf
 If NOT PathValid(@TempDir) Then
-  If $gergui Then
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Der %TEMP%-Pfad darf nicht mehr als " & $path_max_length & " Zeichen lang sein und" _
-                     & @LF & "darf keines der folgenden Zeichen enthalten: " & $path_invalid_chars)
-  Else
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The %TEMP% path must not be more than " & $path_max_length & " characters long and" _
-                    & @LF & "must not contain any of the following characters: " & $path_invalid_chars)
-  EndIf
+  MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The %TEMP% path must not be more than " & $path_max_length & " characters long and" _
+                  & @LF & "must not contain any of the following characters: " & $path_invalid_chars)
   Exit(1)
 EndIf
 If StringRight(EnvGet("TEMP"), 1) = "\" Then
-  If $gergui Then
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Der %TEMP%-Pfad enthält einen abschließenden Backslash ('\').")
-  Else
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The %TEMP% path contains a trailing backslash ('\').")
-  EndIf
+  MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The %TEMP% path contains a trailing backslash ('\').")
   Exit(1)
 EndIf
 If NOT DirectoryStructureExists() Then
-  If $gergui Then
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Fehler", "Die Verzeichnisstruktur ist unvollständig." _
-                     & @LF & "Bitte behalten Sie diese beim Entpacken des Zip-Archivs bei.")
-  Else
-    MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The directory structure is incomplete." _
-                    & @LF & "Please keep it when you unpack the Zip archive.")
-  EndIf
+  MsgBox(BitOr($MB_TASKMODAL, $MB_ICONERROR, $MB_OK), "Error", "The directory structure is incomplete." _
+                  & @LF & "Please keep it when you unpack the Zip archive.")
   Exit(1)
 EndIf
 Local $accelKeys[2][2] = [["{enter}", $btn_start], ["{escape}", $btn_exit]]
@@ -1836,54 +1496,30 @@ While 1
       EndIf
 
     Case $usbfsf            ; FSF button pressed
-      If $gergui Then
-        $dummy = FileSelectFolder("Wählen Sie das Zielverzeichnis:", "", 1, GUICtrlRead($usbpath))
-      Else
-        $dummy = FileSelectFolder("Choose target directory:", "", 1, GUICtrlRead($usbpath))
-      EndIf
+      $dummy = FileSelectFolder("Choose target directory:", "", 1, GUICtrlRead($usbpath))
       If FileExists($dummy) Then
         GUICtrlSetData($usbpath, $dummy)
       EndIf
 
     Case $usbclean          ; 'Clean up target directory' check box toggled
       If IsCheckBoxChecked($usbclean) Then
-        If $gergui Then
-          If MsgBox(BitOr($MB_TASKMODAL, $MB_DEFBUTTON2, $MB_ICONEXCLAMATION, $MB_YESNO), "Warnung", "Durch die Option 'Zielverzeichnis bereinigen'" _
-                               & @LF & "werden dort bereits existierende Dateien gelöscht." _
-                               & @LF & "Möchten Sie fortsetzen?") = $msgbox_btn_no Then
-            GUICtrlSetState($usbclean, $GUI_UNCHECKED)
-          EndIf
-        Else
-          If MsgBox(BitOr($MB_TASKMODAL, $MB_DEFBUTTON2, $MB_ICONEXCLAMATION, $MB_YESNO), "Warning", "The option 'Clean up target directory'" _
-                               & @LF & "will delete existing files there." _
-                               & @LF & "Do you wish to proceed?") = $msgbox_btn_no Then
-            GUICtrlSetState($usbclean, $GUI_UNCHECKED)
-          EndIf
+        If MsgBox(BitOr($MB_TASKMODAL, $MB_DEFBUTTON2, $MB_ICONEXCLAMATION, $MB_YESNO), "Warning", "The option 'Clean up target directory'" _
+                             & @LF & "will delete existing files there." _
+                             & @LF & "Do you wish to proceed?") = $msgbox_btn_no Then
+          GUICtrlSetState($usbclean, $GUI_UNCHECKED)
         EndIf
       EndIf
 
     Case $imageonly         ; Image only checkbox toggled
       If IsCheckBoxChecked($imageonly) Then
-        If $gergui Then
-          If MsgBox(BitOr($MB_TASKMODAL, $MB_DEFBUTTON2, $MB_ICONEXCLAMATION, $MB_YESNO), "Warnung", "Durch diese Option verhindern Sie das Herunterladen aktueller Updates." _
-                               & @LF & "Dies kann ein erhöhtes Sicherheitsrisiko für das Zielsystem bedeuten." _
-                               & @LF & "Möchten Sie fortsetzen?") = $msgbox_btn_no Then
-            GUICtrlSetState($imageonly, $GUI_UNCHECKED)
-          Else
-            GUICtrlSetState($verifydownloads, $GUI_DISABLE)
-            GUICtrlSetState($seconly, $GUI_DISABLE)
-            GUICtrlSetState($shutdown, $GUI_UNCHECKED + $GUI_DISABLE)
-          EndIf
+        If MsgBox(BitOr($MB_TASKMODAL, $MB_DEFBUTTON2, $MB_ICONEXCLAMATION, $MB_YESNO), "Warning", "This option prevents downloading of recent updates." _
+                             & @LF & "This may increase security risks for the target system." _
+                             & @LF & "Do you wish to proceed?") = $msgbox_btn_no Then
+          GUICtrlSetState($imageonly, $GUI_UNCHECKED)
         Else
-          If MsgBox(BitOr($MB_TASKMODAL, $MB_DEFBUTTON2, $MB_ICONEXCLAMATION, $MB_YESNO), "Warning", "This option prevents downloading of recent updates." _
-                               & @LF & "This may increase security risks for the target system." _
-                               & @LF & "Do you wish to proceed?") = $msgbox_btn_no Then
-            GUICtrlSetState($imageonly, $GUI_UNCHECKED)
-          Else
-            GUICtrlSetState($verifydownloads, $GUI_DISABLE)
-            GUICtrlSetState($seconly, $GUI_DISABLE)
-            GUICtrlSetState($shutdown, $GUI_UNCHECKED + $GUI_DISABLE)
-          EndIf
+          GUICtrlSetState($verifydownloads, $GUI_DISABLE)
+          GUICtrlSetState($seconly, $GUI_DISABLE)
+          GUICtrlSetState($shutdown, $GUI_UNCHECKED + $GUI_DISABLE)
         EndIf
       Else
         If IniRead($inifilename, $ini_section_misc, $misc_token_skipdownload, $disabled) = $disabled Then
@@ -1894,32 +1530,19 @@ While 1
       EndIf
 
     Case $btn_proxy         ; Proxy button pressed
-      If $gergui Then
-        $dummy = InputBox("HTTP-Proxy-Einstellung", _
-                          "ACHTUNG: Sonderzeichen müssen hier gemäß RFC1738 codiert werden." & @LF _
-                        & "Um die Speicherung Ihres Passworts zu vermeiden," & @LF _
-                        & "lassen Sie es hier bitte weg (http://Benutzername:@Server[:Port])." & @LF & @LF _
-                        & "Bitte geben Sie Ihre HTTP-Proxy-URL ein" & @LF _
-                        & "(http://[Benutzername:[Passwort]@]Server[:Port]):", $proxy, "", 400, 200)
-      Else
-        $dummy = InputBox("HTTP Proxy setting", _
-                          "NOTE: Special characters have to be encoded according to RFC1738 here." & @LF _
-                        & "To avoid storage of your password, please omit it here" & @LF _
-                        & "(http://username:@server[:port])." & @LF & @LF _
-                        & "Please enter your HTTP Proxy URL" & @LF _
-                        & "(http://[username:[password]@]server[:port]):", $proxy, "", 420, 200)
-      EndIf
+      $dummy = InputBox("HTTP Proxy setting", _
+                        "NOTE: Special characters have to be encoded according to RFC1738 here." & @LF _
+                      & "To avoid storage of your password, please omit it here" & @LF _
+                      & "(http://username:@server[:port])." & @LF & @LF _
+                      & "Please enter your HTTP Proxy URL" & @LF _
+                      & "(http://[username:[password]@]server[:port]):", $proxy, "", 420, 200)
       If ( (@error = 0) AND ($proxy <> $dummy) ) Then
         $proxy = $dummy
         $proxypwd = ""
       EndIf
 
     Case $btn_wsus          ; WSUS button pressed
-      If $gergui Then
-        $dummy = InputBox("WSUS-Einstellung", "Bitte geben Sie Ihre WSUS-URL ein" & @LF & "(http://Server):", $wsus, "", 220, 130)
-      Else
-        $dummy = InputBox("WSUS setting", "Please enter your WSUS URL" & @LF & "(http://server):", $wsus, "", 200, 130)
-      EndIf
+      $dummy = InputBox("WSUS setting", "Please enter your WSUS URL" & @LF & "(http://server):", $wsus, "", 200, 130)
       If @error = 0 Then
         $wsus = $dummy
       EndIf
@@ -1929,34 +1552,18 @@ While 1
       $runany = False
       If NOT IsCheckBoxChecked($imageonly) Then
         If ( (StringInStr($proxy, ":@") > 0) AND ($proxypwd = "") ) Then
-          If $gergui Then
-            $dummy = InputBox("HTTP-Proxy-Passwort", _
-                              "ACHTUNG: Bitte codieren Sie Sonderzeichen hier nicht." & @LF _
-                            & "Dies geschieht automatisch." & @LF & @LF _
-                            & "Bitte geben Sie Ihr HTTP-Proxy-Passwort ein:", "", "*", 320, 150)
-          Else
-            $dummy = InputBox("HTTP Proxy password", _
-                              "NOTE: Please do not encode special characters here." & @LF _
-                            & "This will be done automatically." & @LF & @LF _
-                            & "Please enter your HTTP Proxy password:", "", "*", 300, 150)
-          EndIf
+          $dummy = InputBox("HTTP Proxy password", _
+                            "NOTE: Please do not encode special characters here." & @LF _
+                          & "This will be done automatically." & @LF & @LF _
+                          & "Please enter your HTTP Proxy password:", "", "*", 300, 150)
           If @error = 0 Then
             $proxypwd = RFC1738EncodedString($dummy)
           Else
             ContinueLoop
           EndIf
         EndIf
-        If (IniRead($inifilename, $ini_section_misc, $misc_token_chkver, $enabled) = $enabled) Then
-          Switch RunVersionCheck(AuthProxy($proxy, $proxypwd))
-            Case -1 ; Yes
-              Run(@ComSpec & " /D /C start " & $downloadURL)
-              RunSelfUpdate(AuthProxy($proxy, $proxypwd))
-              ExitLoop
-            Case 1  ; Cancel / Close
-              Run(@ComSpec & " /D /C start " & $downloadURL)
-              ContinueLoop
-          EndSwitch
-        EndIf
+        ; No online version check / self-update in this build: it would contact the
+        ; WSUS Offline community repository and could replace this build with theirs.
       EndIf
       IniWrite(ClientIniFileName(), $ini_section_inst, $opts_token_seconly, CheckBoxStateToString($seconly))
       If ( (IniRead($inifilename, $ini_section_misc, $misc_token_wsus_trans, $disabled) = $enabled) AND ($wsus <> "") ) Then
@@ -2298,16 +1905,9 @@ While 1
       WinSetState($maindlg, $maindlg, @SW_RESTORE)
       If ($runany) Then
         If IsCheckBoxChecked($scripting) Then
-          If $gergui Then
-            If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_YESNO), "Info", "Sammelskript " & @ScriptDir & "\cmd\custom\RunAll.cmd erstellt." _
-                      & @LF & "Möchten Sie das Skript nun prüfen?") = $msgbox_btn_yes Then
-              ShowRunAll()
-            EndIf
-          Else
-            If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_YESNO), "Info", "Collection script " & @ScriptDir & "\cmd\custom\RunAll.cmd created." _
-                      & @LF & "Would you like to check the script now?") = $msgbox_btn_yes Then
-              ShowRunAll()
-            EndIf
+          If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_YESNO), "Info", "Collection script " & @ScriptDir & "\cmd\custom\RunAll.cmd created." _
+                    & @LF & "Would you like to check the script now?") = $msgbox_btn_yes Then
+            ShowRunAll()
           EndIf
         Else
           If IsCheckBoxChecked($shutdown) Then
@@ -2315,31 +1915,16 @@ While 1
             ExitLoop
           EndIf
           If IsCheckBoxChecked($imageonly) Then
-            If $gergui Then
-              MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_OK), "Info", "Image-Erstellung / Kopieren erfolgreich.")
-            Else
-              MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_OK), "Info", "Image creation / copying successful.")
-            EndIf
+            MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_OK), "Info", "Image creation / copying successful.")
           Else
-            If $gergui Then
-              If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_YESNO), "Info", "Herunterladen / Image-Erstellung / Kopieren erfolgreich." _
-                        & @LF & "Möchten Sie nun die Protokolldatei auf mögliche Warnungen prüfen?") = $msgbox_btn_yes Then
-                ShowLogFile()
-              EndIf
-            Else
-              If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_YESNO), "Info", "Download / image creation / copying successful." _
-                        & @LF & "Would you like to check the log file for possible warnings now?") = $msgbox_btn_yes Then
-                ShowLogFile()
-              EndIf
+            If MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_YESNO), "Info", "Download / image creation / copying successful." _
+                      & @LF & "Would you like to check the log file for possible warnings now?") = $msgbox_btn_yes Then
+              ShowLogFile()
             EndIf
           EndIf
         EndIf
       Else
-        If $gergui Then
-          MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_OK), "Info", "Nichts zu tun!")
-        Else
-          MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_OK), "Info", "Nothing to do!")
-        EndIf
+        MsgBox(BitOr($MB_TASKMODAL, $MB_ICONINFORMATION, $MB_OK), "Info", "Nothing to do!")
       EndIf
 
   EndSwitch

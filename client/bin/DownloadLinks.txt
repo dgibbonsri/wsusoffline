@@ -1,1 +1,1 @@
-https://github.com/jessek/hashdeep/releases
+hashdeep.exe, hashdeep64.exe  hashdeep 4.4  https://github.com/jessek/hashdeep/releases/tag/v4.4  (identical to md5deep-4.4.zip)

@@ -1,5 +1,5 @@
-http://www.autoitscript.com/autoit3/
-https://eternallybored.org/misc/wget/
-http://www.info-zip.org/UnZip.html
-https://sourceforge.net/projects/tumagcc/files/
-https://sourceforge.net/projects/unxutils/
+Bundled tools and where they come from (all checked byte-for-byte against the official releases):
+Aut2Exe.exe, Aut2exe_x64.exe  AutoIt 3.3.16.1   https://www.autoitscript.com/  (signed: AutoIt Consulting Ltd)
+wget.exe, wget64.exe          GNU Wget 1.21.3    https://eternallybored.org/misc/wget/  (signed: Jernej Simoncic)
+gsort.exe (= sort.exe), join.exe, cut.exe  GNU textutils 2.0 from UnxUtils  https://sourceforge.net/projects/unxutils/
+Not bundled: Sysinternals Autologon, Sigcheck, Streams are downloaded from download.sysinternals.com (Microsoft).

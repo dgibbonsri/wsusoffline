@@ -117,9 +117,9 @@ if not exist %SC_PATH% goto NoSc
 
 rem *** Check user's privileges ***
 echo Checking user's privileges...
-if not exist ..\bin\IfAdmin.exe goto NoIfAdmin
-..\bin\IfAdmin.exe
-if not errorlevel 1 goto NoAdmin
+rem fltmc.exe (part of Windows) only succeeds when run with administrator rights.
+%SystemRoot%\System32\fltmc.exe >nul 2>&1
+if errorlevel 1 goto NoAdmin
 
 rem *** Determine system's properties ***
 echo Determining system's properties...
@@ -219,6 +219,7 @@ call :Log "Info: Found Microsoft .NET Framework 3.5 version %DOTNET35_VER_MAJOR%
 call :Log "Info: Found Microsoft .NET Framework 4 version %DOTNET4_VER_MAJOR%.%DOTNET4_VER_MINOR%.%DOTNET4_VER_BUILD% (release: %DOTNET4_RELEASE%)"
 call :Log "Info: Found Windows Management Framework version %WMF_VER_MAJOR%.%WMF_VER_MINOR%.%WMF_VER_BUILD%.%WMF_VER_REVIS%"
 call :Log "Info: Found Windows Defender definitions version %WDDEFS_VER_MAJOR%.%WDDEFS_VER_MINOR%.%WDDEFS_VER_BUILD%.%WDDEFS_VER_REVIS%"
+call :Log "Info: Found Microsoft Defender platform version %WDPLAT_VER_MAJOR%.%WDPLAT_VER_MINOR%.%WDPLAT_VER_BUILD%.%WDPLAT_VER_REVIS%"
 if "%O2K13_VER_MAJOR%" NEQ "" (
   call :Log "Info: Found Microsoft Office 2013 version %O2K13_VER_MAJOR%.%O2K13_VER_MINOR%.%O2K13_VER_BUILD%.%O2K13_VER_REVIS% (o2k13 %O2K13_ARCH% %O2K13_LANG% sp%O2K13_SP_VER%)"
 )
@@ -1501,6 +1502,59 @@ echo Checking Windows Defender installation state...
 if "%WD_INSTALLED%" NEQ "1" goto SkipWDInst
 if "%WD_DISABLED%"=="1" goto SkipWDInst
 if "%SKIP_DEFS%"=="/skipdefs" goto SkipWDInst
+
+rem *** Update Microsoft Defender antimalware platform (KB4052623), before the definitions ***
+set WDPLAT_FILENAME=..\wddefs\%OS_ARCH%-glb\updateplatform.exe
+if not exist %WDPLAT_FILENAME% goto SkipWDPlatInst
+echo Determining Microsoft Defender platform file version...
+%CSCRIPT_PATH% //Nologo //B //E:vbs DetermineFileVersion.vbs %WDPLAT_FILENAME% WDPLAT_VER_TARGET
+if not exist "%TEMP%\SetFileVersion.cmd" goto SkipWDPlatInst
+call "%TEMP%\SetFileVersion.cmd"
+del "%TEMP%\SetFileVersion.cmd"
+if "%WDPLAT_VER_MAJOR%"=="" goto InstallWDPlat
+if %WDPLAT_VER_MAJOR% LSS %WDPLAT_VER_TARGET_MAJOR% goto InstallWDPlat
+if %WDPLAT_VER_MAJOR% GTR %WDPLAT_VER_TARGET_MAJOR% goto SkipWDPlatInst
+if %WDPLAT_VER_MINOR% LSS %WDPLAT_VER_TARGET_MINOR% goto InstallWDPlat
+if %WDPLAT_VER_MINOR% GTR %WDPLAT_VER_TARGET_MINOR% goto SkipWDPlatInst
+if %WDPLAT_VER_BUILD% LSS %WDPLAT_VER_TARGET_BUILD% goto InstallWDPlat
+if %WDPLAT_VER_BUILD% GTR %WDPLAT_VER_TARGET_BUILD% goto SkipWDPlatInst
+if %WDPLAT_VER_REVIS% GEQ %WDPLAT_VER_TARGET_REVIS% goto SkipWDPlatInst
+:InstallWDPlat
+if "%VERIFY_MODE%"=="/verify" (
+  if exist ..\md\hashes-wddefs-%OS_ARCH%-glb.txt (
+    echo Verifying integrity of %WDPLAT_FILENAME%...
+    %SystemRoot%\System32\findstr.exe /L /I /C:%% /C:updateplatform.exe ..\md\hashes-wddefs-%OS_ARCH%-glb.txt >"%TEMP%\hash-wdplat.txt"
+    %HASHDEEP_PATH% -a -b -k "%TEMP%\hash-wdplat.txt" %WDPLAT_FILENAME% >nul
+    if errorlevel 1 (
+      del "%TEMP%\hash-wdplat.txt"
+      echo Warning: Integrity check of %WDPLAT_FILENAME% failed. Skipping the platform update.
+      call :Log "Warning: Integrity check of %WDPLAT_FILENAME% failed. Skipped the platform update"
+      goto SkipWDPlatInst
+    )
+    del "%TEMP%\hash-wdplat.txt"
+  )
+)
+echo Installing Microsoft Defender platform %WDPLAT_VER_TARGET_MAJOR%.%WDPLAT_VER_TARGET_MINOR%.%WDPLAT_VER_TARGET_BUILD%.%WDPLAT_VER_TARGET_REVIS%...
+rem UpdatePlatform.exe is built for Windows Update and runs silently without arguments.
+%WDPLAT_FILENAME%
+set ERR_LEVEL=%errorlevel%
+if "%ERR_LEVEL%"=="0" (
+  call :Log "Info: Installed Microsoft Defender platform %WDPLAT_VER_TARGET_MAJOR%.%WDPLAT_VER_TARGET_MINOR%.%WDPLAT_VER_TARGET_BUILD%.%WDPLAT_VER_TARGET_REVIS%"
+) else if "%ERR_LEVEL%"=="3010" (
+  set REBOOT_REQUIRED=1
+  call :Log "Info: Installed Microsoft Defender platform %WDPLAT_VER_TARGET_MAJOR%.%WDPLAT_VER_TARGET_MINOR%.%WDPLAT_VER_TARGET_BUILD%.%WDPLAT_VER_TARGET_REVIS% (reboot required)"
+) else (
+  echo Warning: Microsoft Defender platform update returned error code %ERR_LEVEL%.
+  call :Log "Warning: Microsoft Defender platform update returned error code %ERR_LEVEL%"
+)
+:SkipWDPlatInst
+set WDPLAT_FILENAME=
+set WDPLAT_VER_TARGET_MAJOR=
+set WDPLAT_VER_TARGET_MINOR=
+set WDPLAT_VER_TARGET_BUILD=
+set WDPLAT_VER_TARGET_REVIS=
+
+rem *** Update Windows Defender definitions ***
 set WDDEFS_FILENAME=..\wddefs\%OS_ARCH%-glb\mpam-fe.exe
 if not exist %WDDEFS_FILENAME% (
   echo Warning: Windows Defender definition file ^(%WDDEFS_FILENAME%^) not found.
@@ -2242,13 +2296,6 @@ goto Error
 echo.
 echo ERROR: Potentially endless reboot/recall loop detected.
 call :Log "Error: Potentially endless reboot/recall loop detected"
-echo.
-goto Error
-
-:NoIfAdmin
-echo.
-echo ERROR: File ..\bin\IfAdmin.exe not found.
-call :Log "Error: File ..\bin\IfAdmin.exe not found"
 echo.
 goto Error
 

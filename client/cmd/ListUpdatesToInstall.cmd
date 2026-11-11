@@ -136,7 +136,7 @@ for /F "usebackq tokens=1,2 delims=," %%i in ("%TEMP%\MissingUpdateIds.txt") do 
   %SystemRoot%\System32\find.exe /I "%%i" "%TEMP%\ExcludeList.txt" >nul 2>&1
   if errorlevel 1 (
     if not "%%j"=="" (
-      rem dynamisch ermittelte Updates als CAB
+      rem dynamically determined updates (CAB files)
       for %%k in (%OS_LANG% glb) do (
         if exist ..\UpdateTable\UpdateTable-%OS_NAME%-%%k.csv (
           for /F "tokens=1,2 delims=," %%l in (..\UpdateTable\UpdateTable-%OS_NAME%-%%k.csv) do (

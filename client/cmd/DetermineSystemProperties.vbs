@@ -33,6 +33,8 @@ Private Const strRegValSHA2Support2            = "SHA2-Core-Codesigning-Support"
 Private Const strRegValInstallationType        = "InstallationType"
 Private Const strRegValPShVersion              = "PowerShellVersion"
 Private Const strRegValAVSVersion              = "AVSignatureVersion"
+Private Const strRegKeyWDService              = "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend\"
+Private Const strRegValWDImagePath            = "ImagePath"
 Private Const strRegValDisableAntiSpyware      = "DisableAntiSpyware"
 'Private Const strRegValDisableAntiVirus        = "DisableAntiVirus"
 Private Const strRegValCurrentPowerPolicy      = "CurrentPowerPolicy"
@@ -74,6 +76,23 @@ Private Function RegRead(objShell, strName)
   RegRead = objShell.RegRead(strName)
   If Err <> 0 Then
     RegRead = ""
+    Err.Clear
+  End If
+End Function
+
+' Microsoft Defender antimalware platform version = file version of the Defender service binary,
+' e.g. C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.26100.4-0\MsMpEng.exe
+Private Function GetWDPlatformVersion(objShell, objFS)
+Dim strPath
+  GetWDPlatformVersion = ""
+  strPath = Replace(RegRead(objShell, strRegKeyWDService & strRegValWDImagePath), """", "")
+  If strPath = "" Then Exit Function
+  strPath = objShell.ExpandEnvironmentStrings(strPath)
+  If Not objFS.FileExists(strPath) Then Exit Function
+  On Error Resume Next
+  GetWDPlatformVersion = objFS.GetFileVersion(strPath)
+  If Err <> 0 Then
+    GetWDPlatformVersion = ""
     Err.Clear
   End If
 End Function
@@ -389,7 +408,7 @@ Private Function OfficeSPVersion(strExeVersion)
   Next
 End Function
 
-' Quelle: https://stackoverflow.com/questions/854975/how-to-read-from-a-text-file-using-vbscript
+' Source: https://stackoverflow.com/questions/854975/how-to-read-from-a-text-file-using-vbscript
 Private Function ReadTextFile(strRelFileName)
   Dim dict, file, line, row
   
@@ -745,6 +764,9 @@ End If
 
 ' Determine Microsoft Antimalware signatures' version
 WriteVersionToFile objCmdFile, "WDDEFS_VER", RegRead(wshShell, strRegKeyWDDefs & strRegValAVSVersion)
+
+' Determine Microsoft Defender antimalware platform version
+WriteVersionToFile objCmdFile, "WDPLAT_VER", GetWDPlatformVersion(wshShell, objFileSystem)
 
 ' Check quality compatibility registry value
 If RegExists(wshShell, strRegKeyQualityCompat) Then

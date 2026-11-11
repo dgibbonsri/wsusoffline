@@ -271,7 +271,6 @@ if "%IGNORE_ERRORS%"=="1" goto InstSuccess
 goto InstFailure
 
 :InstZip
-if not exist ..\bin\unzip.exe goto NoUnZip
 set FILE_FULL_PATH_ONLY=
 for /f "tokens=4 delims=\" %%i in ('echo %FILE_FULL_PATH_DISPLAY%') do (
   if not "%%i"=="" (
@@ -284,7 +283,12 @@ if "%FILE_FULL_PATH_ONLY%"=="" (
   goto InstFailure
 )
 echo Unpacking %FILE_FULL_PATH_DISPLAY% to "%TEMP%\%FILE_FULL_PATH_ONLY%.msu"...
-..\bin\unzip.exe -o -d "%TEMP%" "%FILE_FULL_PATH%" "%FILE_FULL_PATH_ONLY%.msu"
+rem Extract with the .NET zip support built into Windows (no external unzip tool needed)
+set WOU_ZIP_FILE=%FILE_FULL_PATH%
+set WOU_ZIP_ENTRY=%FILE_FULL_PATH_ONLY%.msu
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $z = [IO.Compression.ZipFile]::OpenRead($env:WOU_ZIP_FILE); try { $e = $z.Entries | Where-Object { $_.Name -eq $env:WOU_ZIP_ENTRY } | Select-Object -First 1; if ($e) { [IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path $env:TEMP $e.Name), $true) } } finally { $z.Dispose() }"
+set WOU_ZIP_FILE=
+set WOU_ZIP_ENTRY=
 if not exist "%TEMP%\%FILE_FULL_PATH_ONLY%.msu" (
   echo ERROR: Installation file "%TEMP%\%FILE_FULL_PATH_ONLY%.msu" not found.
   echo %DATE% %TIME% - Error: Installation file "%TEMP%\%FILE_FULL_PATH_ONLY%.msu" not found>>%UPDATE_LOGFILE%
@@ -409,11 +413,6 @@ goto Error
 echo ERROR: Directory "%TEMP%" not found.
 echo %DATE% %TIME% - Error: Directory "%TEMP%" not found>>%UPDATE_LOGFILE%
 goto Error
-
-:NoUnZip
-echo ERROR: Utility ..\bin\unzip.exe not found.
-echo %DATE% %TIME% - Error: Utility ..\bin\unzip.exe not found>>%UPDATE_LOGFILE%
-goto InstFailure
 
 :CacheError
 echo ERROR: Failed to copy %FILE_FULL_PATH% to the temporary directory.

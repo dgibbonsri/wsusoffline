@@ -165,7 +165,7 @@ goto CreateImage
 rem *** Create ISO image ***
 if %OUTPUT_PATH%~==~ set OUTPUT_PATH=..\iso
 if not exist %OUTPUT_PATH%\. goto NoOutputPath
-if not exist ..\bin\mkisofs.exe goto NoMkIsoFs
+if not exist "%~dp0BuildIsoWithImapi.ps1" goto NoIsoBuilder
 if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" (set HASHDEEP_EXE=hashdeep64.exe) else (
   if /i "%PROCESSOR_ARCHITEW6432%"=="AMD64" (set HASHDEEP_EXE=hashdeep64.exe) else (set HASHDEEP_EXE=hashdeep.exe)
 )
@@ -180,7 +180,8 @@ for /F "usebackq tokens=1,2* delims=\" %%i in ("%TEMP%\ExcludeListISO_2.txt") do
   ) else (echo */%%i/%%j/*>>%ISO_FILTER%)
 )
 if exist "%TEMP%\ExcludeListISO_2.txt" del "%TEMP%\ExcludeListISO_2.txt"
-..\bin\mkisofs.exe -iso-level 4 -joliet -joliet-long -rational-rock -udf -exclude-list %ISO_FILTER% -output %OUTPUT_PATH%\%ISO_NAME%.iso -volid %ISO_VOLID% ..\client
+rem Built with IMAPI2, the disc-image service in Windows (UDF file system, files over 4 GB supported)
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0BuildIsoWithImapi.ps1" -SourcePath ..\client -OutputFile "%OUTPUT_PATH%\%ISO_NAME%.iso" -VolumeName "%ISO_VOLID%" -ExcludeList %ISO_FILTER%
 if errorlevel 1 (
   if exist %ISO_FILTER% del %ISO_FILTER%
   goto MkIsoError
@@ -238,10 +239,10 @@ echo %DATE% %TIME% - Error: Output path %OUTPUT_PATH% not found>>%DOWNLOAD_LOGFI
 echo.
 goto Error
 
-:NoMkIsoFs
+:NoIsoBuilder
 echo.
-echo ERROR: Utility ..\bin\mkisofs.exe not found.
-echo %DATE% %TIME% - Error: Utility ..\bin\mkisofs.exe not found>>%DOWNLOAD_LOGFILE%
+echo ERROR: ISO builder %~dp0BuildIsoWithImapi.ps1 not found.
+echo %DATE% %TIME% - Error: ISO builder BuildIsoWithImapi.ps1 not found>>%DOWNLOAD_LOGFILE%
 echo.
 goto Error
 
